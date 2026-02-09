@@ -220,7 +220,13 @@ export default function OrdersHubPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
+    // Parse the date and format it using local date components to avoid timezone conversion issues
+    const date = new Date(dateString)
+    // Use local date components to avoid day shift from timezone conversion
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${month}/${day}/${year}`
   }
 
   const handleSort = (field: string) => {
