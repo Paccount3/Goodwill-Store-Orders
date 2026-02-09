@@ -73,11 +73,13 @@ export default function OrderDetailsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    // Parse the date and format it using local date components to avoid timezone conversion issues
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    return `${monthNames[month - 1]} ${day}, ${year}`
   }
 
   const formatDateTime = (dateString: string) => {
