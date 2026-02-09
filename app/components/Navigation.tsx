@@ -87,16 +87,15 @@ export default function Navigation() {
               >
                 Housatonic Maintenance
               </Link>
-              <div className="flex-1"></div>
               <Link
                 href="/order-stats"
-                className={`inline-flex items-center px-4 py-2 text-sm font-bold transition-all rounded-full ${
+                className={`inline-flex items-center px-3 py-2 border-b-2 text-base font-bold transition-colors ${
                   isActive('/order-stats')
-                    ? 'bg-white text-[#0066CC] shadow-md'
-                    : 'bg-white/20 text-white hover:bg-white/30 hover:shadow-lg border-2 border-white/30'
+                    ? 'border-white text-white'
+                    : 'border-transparent text-white hover:text-gray-200 hover:border-blue-200'
                 }`}
               >
-                📊 Order Stats
+                Order Stats
               </Link>
             </div>
           </div>
