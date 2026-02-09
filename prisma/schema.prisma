@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Store {
+  id          Int      @id @default(autoincrement())
+  storeNumber String   @unique
+  name        String
+  orders      Order[]
+}
+
+model Product {
+  id              Int         @id @default(autoincrement())
+  name            String
+  category        String
+  unitPriceCents  Int
+  maxQuantity     Int          @default(5)
+  isActive        Boolean     @default(true)
+  isUniform       Boolean     @default(false)
+  availableSizes  String?     // JSON array: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]
+  availableColors String?     // JSON array: ["Navy Blue", "Royal Blue", "White", etc.]
+  style           String?      // "Men", "Women", "Unisex", or null
+  sizePriceMap    String?     // JSON object: {"XS": 1600, "S": 1600, "XXL": 1800, ...} in cents
+  orderLines      OrderLine[]
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  storeId      Int
+  store         Store       @relation(fields: [storeId], references: [id])
+  managerName  String
+  createdAt    DateTime    @default(now())
+  orderDate    DateTime    @default(now())
+  subtotalCents Int
+  notes        String?
+  orderType    String?      // 'NSSO', 'SU', 'ADC_S', 'ADC_M', 'HM'
+  orderLines   OrderLine[]
+}
+
+model OrderLine {
+  id                    Int     @id @default(autoincrement())
+  orderId               Int
+  order                 Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId             Int
+  product               Product @relation(fields: [productId], references: [id])
+  productNameSnapshot   String
+  unitPriceCentsSnapshot Int
+  currentQuantity       Int     @default(0)
+  orderQuantity         Int
+  lineTotalCents        Int
+  size                  String? // For uniforms: "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"
+  color                 String? // For uniforms: "Navy Blue", "Royal Blue", "White", etc.
+  style                 String? // For uniforms: "Men", "Women", "Unisex"
+}
