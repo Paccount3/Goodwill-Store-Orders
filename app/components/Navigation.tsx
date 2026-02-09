@@ -28,16 +28,6 @@ export default function Navigation() {
                 New Store Supplies Order
               </Link>
               <Link
-                href="/orders"
-                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
-                  isActive('/orders')
-                    ? 'border-white text-white'
-                    : 'border-transparent text-blue-100 hover:text-white hover:border-blue-200'
-                }`}
-              >
-                Orders Hub
-              </Link>
-              <Link
                 href="/catalog"
                 className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
                   isActive('/catalog')
@@ -86,6 +76,16 @@ export default function Navigation() {
                 }`}
               >
                 Housatonic Maintenance
+              </Link>
+              <Link
+                href="/orders"
+                className={`inline-flex items-center px-3 py-2 border-b-2 text-base font-bold transition-colors ${
+                  isActive('/orders')
+                    ? 'border-white text-white'
+                    : 'border-transparent text-white hover:text-gray-200 hover:border-blue-200'
+                }`}
+              >
+                Orders Hub
               </Link>
               <Link
                 href="/order-stats"
