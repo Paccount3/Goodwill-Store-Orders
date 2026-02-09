@@ -164,20 +164,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Always use today's date at midnight local time to avoid timezone issues
-    // Create date in local timezone, then convert to ISO string and parse back to avoid UTC conversion
+    // Always use today's date at midnight UTC to ensure consistent storage
+    // Create date at midnight UTC to avoid timezone conversion issues
     const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
-    const day = today.getDate()
-    // Create date at midnight in local timezone (not UTC)
-    const todayLocal = new Date(year, month, day, 0, 0, 0, 0)
+    const year = today.getUTCFullYear()
+    const month = today.getUTCMonth()
+    const day = today.getUTCDate()
+    // Create date at midnight UTC (this ensures the date stored matches the date displayed)
+    const todayUTC = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
     
     const order = await prisma.order.create({
       data: {
         storeId: parseInt(storeId),
         managerName,
-        orderDate: todayLocal, // Always use today's date at local midnight
+        orderDate: todayUTC, // Always use today's date at UTC midnight
         notes: notes || null,
         orderType: orderType || null,
         subtotalCents,

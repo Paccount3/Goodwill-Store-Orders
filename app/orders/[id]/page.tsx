@@ -73,11 +73,22 @@ export default function OrderDetailsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    // Parse the date and format it using local date components to avoid timezone conversion issues
+    // Parse the ISO date string directly to avoid timezone conversion
+    // Dates are stored as UTC, so we extract the date part from the ISO string
+    // Format: "2026-02-09T00:00:00.000Z" -> extract "2026-02-09"
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (dateMatch) {
+      const year = parseInt(dateMatch[1])
+      const month = parseInt(dateMatch[2])
+      const day = parseInt(dateMatch[3])
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      return `${monthNames[month - 1]} ${day}, ${year}`
+    }
+    // Fallback to regular parsing if format doesn't match
     const date = new Date(dateString)
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const day = date.getDate()
+    const year = date.getUTCFullYear()
+    const month = date.getUTCMonth() + 1
+    const day = date.getUTCDate()
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     return `${monthNames[month - 1]} ${day}, ${year}`
   }
