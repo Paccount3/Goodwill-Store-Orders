@@ -90,10 +90,10 @@ export default function Navigation() {
               <div className="flex-1"></div>
               <Link
                 href="/order-stats"
-                className={`inline-flex items-center px-4 py-2 border-b-2 border-l-2 text-sm font-bold transition-colors ${
+                className={`inline-flex items-center px-4 py-2 text-sm font-bold transition-all rounded-full ${
                   isActive('/order-stats')
-                    ? 'border-white text-white bg-white/15 rounded-tl'
-                    : 'border-transparent border-l-white/30 text-yellow-200 hover:text-yellow-100 hover:bg-white/10 hover:border-l-white/50 rounded-tl'
+                    ? 'bg-white text-[#0066CC] shadow-md'
+                    : 'bg-white/20 text-white hover:bg-white/30 hover:shadow-lg border-2 border-white/30'
                 }`}
               >
                 📊 Order Stats
