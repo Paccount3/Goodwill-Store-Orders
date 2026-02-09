@@ -5,11 +5,23 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Clear existing data
-  await prisma.orderLine.deleteMany()
-  await prisma.order.deleteMany()
-  await prisma.product.deleteMany()
-  await prisma.store.deleteMany()
+  // Check if database is already seeded
+  const storeCount = await prisma.store.count()
+  const productCount = await prisma.product.count()
+
+  // Only seed if database is empty
+  if (storeCount > 0 || productCount > 0) {
+    console.log(`Database already has data (${storeCount} stores, ${productCount} products). Skipping seed.`)
+    return
+  }
+
+  console.log('Database is empty. Seeding initial data...')
+
+  // Clear existing data (should be empty, but just in case)
+  await prisma.orderLine.deleteMany().catch(() => {})
+  await prisma.order.deleteMany().catch(() => {})
+  await prisma.product.deleteMany().catch(() => {})
+  await prisma.store.deleteMany().catch(() => {})
 
   // Seed Stores
   const stores = await prisma.store.createMany({
