@@ -25,10 +25,16 @@ export async function GET(request: NextRequest) {
       // Exclude uniforms: isUniform is false or not true
       // For SQLite, we'll just check for false, and products without isUniform set will default to false
       conditions.push({ isUniform: false })
-      // Also exclude ADC Supply, ADC Maintenance, and Housatonic Maintenance categories
+      // Also exclude ADC/Housatonic and E-commerce categories (these have dedicated forms)
       conditions.push({
         category: {
-          notIn: ['ADC Supply', 'ADC Maintenance', 'Housatonic Maintenance']
+          notIn: [
+            'ADC Supply',
+            'ADC Maintenance',
+            'Housatonic Maintenance',
+            'Ecom Warehouse',
+            'Ecom Books',
+          ]
         }
       })
     }
