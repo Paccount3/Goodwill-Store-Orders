@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+type OrderLineCreateInput = {
+  productId: number
+  productNameSnapshot: string
+  unitPriceCentsSnapshot: number
+  currentQuantity: number
+  orderQuantity: number
+  lineTotalCents: number
+  size: string | null
+  color: string | null
+  style: string | null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -107,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate subtotal
     let subtotalCents = 0
-    const orderLinesData = []
+    const orderLinesData: OrderLineCreateInput[] = []
     const stockUpdates: { productId: number; newTotalInStock: number }[] = []
 
     for (const item of lineItems) {
