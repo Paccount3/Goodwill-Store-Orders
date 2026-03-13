@@ -28,6 +28,33 @@ interface ProductOrder {
   order: number
 }
 
+// Display order matching EBOOKS form
+const ECOM_EBOOKS_DISPLAY_ORDER: Record<string, number> = {
+  'Copy Paper - White (case) (Ecom Books)': 1,
+  'Copy Paper - Red (ream) (Ecom Books)': 2,
+  'Copy Paper - Yellow (ream) (Ecom Books)': 3,
+  'Copy Paper - Green (ream) (Ecom Books)': 4,
+  'Copy Paper - Blue (ream) (Ecom Books)': 5,
+  'Black Pens (box of 36) (Ecom Books)': 6,
+  'Black Markers (box of 36) (Ecom Books)': 7,
+  'Multi-Color Post-Its (box of 24) (Ecom Books)': 8,
+  'Nylon Gloves - S (case) (Ecom Books)': 9,
+  'Nylon Gloves - M (case) (Ecom Books)': 10,
+  'Nylon Gloves - L (case) (Ecom Books)': 11,
+  'Nylon Gloves - XL (case) (Ecom Books)': 12,
+  'Disposable Masks (Ecom Books)': 13,
+  'MaxGear Thermal Labels (4x6) (Ecom Books)': 14,
+  'Thermal Receipt Paper (Ecom Books)': 15,
+  '10x13 Poly Mailers (Ecom Books)': 16,
+  '14.5x19 Poly Mailers (Ecom Books)': 17,
+  'Tera Handheld Scanner (Ecom Books)': 18,
+  'Safety Box Cutter (Ecom Books)': 19,
+  'Scissors (Ecom Books)': 20,
+  'Stapler (Ecom Books)': 21,
+  'Staples (box) (Ecom Books)': 22,
+  'Tape Measures (Ecom Books)': 23,
+}
+
 // Helper function to get today's date in local timezone (YYYY-MM-DD format)
 const getTodayLocalDate = () => {
   const today = new Date()
@@ -37,7 +64,7 @@ const getTodayLocalDate = () => {
   return `${year}-${month}-${day}`
 }
 
-export default function ADCSupplyPage() {
+export default function EcomEbooksPage() {
   const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -51,7 +78,7 @@ export default function ADCSupplyPage() {
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null)
 
   const [formData, setFormData] = useState({
-    storeId: '', // Will be set to first store by default
+    storeId: '',
     managerName: '',
     orderDate: getTodayLocalDate(),
     notes: '',
@@ -63,13 +90,6 @@ export default function ADCSupplyPage() {
     fetchStores()
     fetchProducts()
   }, [])
-
-  useEffect(() => {
-    // Set default storeId to first store when stores are loaded
-    if (stores.length > 0 && !formData.storeId) {
-      setFormData(prev => ({ ...prev, storeId: stores[0].id.toString() }))
-    }
-  }, [stores])
 
   useEffect(() => {
     // Initialize productOrders when products are loaded
@@ -90,6 +110,13 @@ export default function ADCSupplyPage() {
     }
   }, [products])
 
+  useEffect(() => {
+    // Set default storeId to first store when stores are loaded
+    if (stores.length > 0 && !formData.storeId) {
+      setFormData((prev) => ({ ...prev, storeId: stores[0].id.toString() }))
+    }
+  }, [stores, formData.storeId])
+
   const fetchStores = async () => {
     try {
       const res = await fetch('/api/stores')
@@ -102,20 +129,19 @@ export default function ADCSupplyPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&category=ADC Supply')
+      const res = await fetch('/api/products?activeOnly=true&category=Ecom Books')
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         console.error('API Error Response:', errorData)
         throw new Error(errorData.details || errorData.error || 'Failed to fetch products')
       }
       const data = await res.json()
-      // Ensure data is an array
       setProducts(Array.isArray(data) ? data : [])
       setLoading(false)
     } catch (error: any) {
       console.error('Error fetching products:', error)
       console.error('Error details:', error.message)
-      setProducts([]) // Set to empty array on error
+      setProducts([])
       setLoading(false)
     }
   }
@@ -129,6 +155,7 @@ export default function ADCSupplyPage() {
         value === null
           ? null
           : Math.min(Math.max(0, value), existing.maxQuantity)
+
       const autoOrder =
         nextCurrent === null ? 0 : Math.max(0, existing.maxQuantity - nextCurrent)
 
@@ -136,7 +163,7 @@ export default function ADCSupplyPage() {
         ...prev,
         [productId]: {
           ...existing,
-            current: nextCurrent,
+          current: nextCurrent,
           order: autoOrder,
         },
       }
@@ -153,24 +180,18 @@ export default function ADCSupplyPage() {
       })
   }
 
-  const getSubtotalCents = () => {
-    return getOrderedItems().reduce((sum, item) => {
-      return sum + item.unitPriceCents * item.order
-    }, 0)
+  const calculateSubtotal = () => {
+    return getOrderedItems().reduce(
+      (sum, item) => sum + item.unitPriceCents * item.order,
+      0
+    )
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.managerName) {
       alert('Please fill in all required fields')
-      return
-    }
-
-    // Use first store as default if storeId is not set
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
       return
     }
 
@@ -180,14 +201,12 @@ export default function ADCSupplyPage() {
       return
     }
 
-    // Show confirmation modal instead of submitting directly
     setShowConfirmModal(true)
     setPassword('')
     setPasswordError('')
   }
 
   const handleConfirmSubmit = async () => {
-    // Validate password
     if (password !== 'BIGBLUE') {
       setPasswordError('Incorrect password')
       return
@@ -197,7 +216,6 @@ export default function ADCSupplyPage() {
     setShowConfirmModal(false)
     setSubmitting(true)
 
-    // Use first store as default if storeId is not set
     const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
     if (!storeIdToUse) {
       alert('No stores available')
@@ -216,7 +234,7 @@ export default function ADCSupplyPage() {
           managerName: formData.managerName,
           orderDate: formData.orderDate,
           notes: formData.notes,
-          orderType: 'ADC_S',
+          orderType: 'EEB',
           lineItems: orderedItems.map((item) => ({
             productId: item.productId,
             currentQuantity: item.current,
@@ -234,7 +252,6 @@ export default function ADCSupplyPage() {
       setCreatedOrderId(order.id)
       setSubmitting(false)
 
-      // Show loading animation for 1 second before showing success
       setShowLoadingAnimation(true)
       setTimeout(() => {
         setShowLoadingAnimation(false)
@@ -253,7 +270,6 @@ export default function ADCSupplyPage() {
   }
 
   const handleOrderAgain = () => {
-    // Reset form (keep default storeId)
     const defaultStoreId = stores.length > 0 ? stores[0].id.toString() : ''
     setFormData({
       storeId: defaultStoreId,
@@ -262,7 +278,6 @@ export default function ADCSupplyPage() {
       notes: '',
     })
 
-    // Reset all product orders
     const reset: Record<number, ProductOrder> = {}
     if (Array.isArray(products)) {
       products.forEach((product) => {
@@ -281,7 +296,6 @@ export default function ADCSupplyPage() {
 
     setShowSuccessModal(false)
     setCreatedOrderId(null)
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -299,13 +313,23 @@ export default function ADCSupplyPage() {
     return `$${(cents / 100).toFixed(2)}`
   }
 
-  const productsByCategory = Array.isArray(products) ? products.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = []
-    }
-    acc[product.category].push(product)
-    return acc
-  }, {} as Record<string, Product[]>) : {}
+  const sortedProducts = Array.isArray(products)
+    ? [...products].sort((a, b) => {
+        const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.name] ?? 9999
+        const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.name] ?? 9999
+        return orderA - orderB
+      })
+    : []
+
+  const productsByCategory = sortedProducts.length > 0
+    ? sortedProducts.reduce((acc, product) => {
+        if (!acc[product.category]) {
+          acc[product.category] = []
+        }
+        acc[product.category].push(product)
+        return acc
+      }, {} as Record<string, Product[]>)
+    : {}
 
   if (loading) {
     return (
@@ -317,7 +341,9 @@ export default function ADCSupplyPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">ADC Supply Order Form</h1>
+      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">
+        Ecom Ebooks Supply Order
+      </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Header Info - Condensed */}
@@ -329,116 +355,148 @@ export default function ADCSupplyPage() {
               </label>
               <select
                 disabled
-                value="ADC_S"
+                value="EEB"
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
               >
-                <option value="ADC_S">ADC S</option>
+                <option value="EEB">Ecom Ebooks</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Manager Name <span className="text-red-600">*</span>
+                Manager Name
               </label>
               <input
                 type="text"
-                required
                 value={formData.managerName}
-                onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                onChange={(e) =>
+                  setFormData({ ...formData, managerName: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">Date</label>
-              <input
-                type="date"
-                value={getTodayLocalDate()}
-                readOnly
-                disabled
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
-              />
-            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Notes (Optional)
+                Order Date
+              </label>
+              <input
+                type="date"
+                value={formData.orderDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, orderDate: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-gray-900 mb-1">
+                Notes
               </label>
               <input
                 type="text"
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                placeholder="Add any notes..."
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                placeholder="Optional notes for this order"
               />
             </div>
           </div>
         </div>
 
-        {/* Products Table - Condensed */}
+        {/* Products Table */}
         <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-300 text-xs">
-              <thead className="bg-[#0066CC]">
-                <tr>
-                  <th className="px-2 py-1 text-left text-xs font-bold text-white uppercase border-r border-blue-400">Item</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-20">Current</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-16">Max.</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase w-20">Order</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(productsByCategory).map(([category, prods]) => (
-                  <React.Fragment key={category}>
-                    <tr className="bg-[#E6F2FF]">
-                      <td colSpan={4} className="px-2 py-1 font-bold text-xs text-[#0066CC]">
-                        {category}
-                      </td>
-                    </tr>
-                    {prods.map((product) => {
-                      const po = productOrders[product.id]
-                      if (!po) return null
-                      return (
-                        <tr key={product.id} className="hover:bg-blue-50">
-                          <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
-                            {product.name}
-                          </td>
-                          <td className="px-2 py-1 border-r border-gray-200">
-                            <input
-                              type="number"
-                              min="0"
-                              max={product.maxQuantity}
-                              value={po.current ?? ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'current',
-                                  e.target.value === '' ? null : parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
-                            {product.maxQuantity}
-                          </td>
-                          <td className="px-2 py-1">
-                            <div className="w-full text-center text-xs font-semibold text-gray-900">
-                              {po.order}
-                            </div>
-                          </td>
+          {Object.keys(productsByCategory).length === 0 ? (
+            <div className="text-center py-8 text-gray-600">
+              <p>No Ecom Ebooks products found.</p>
+              <p className="text-xs mt-1">
+                Add products in the Item Catalog under the &quot;Ecom Books&quot; category.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(productsByCategory).map(([category, prods]) => (
+                <div key={category} className="border border-gray-200 rounded-lg">
+                  <div className="px-3 py-2 bg-[#E6F2FF] border-b border-gray-200">
+                    <h2 className="text-sm font-bold text-[#0066CC]">
+                      {category}
+                    </h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 border border-gray-300 text-xs">
+                      <thead className="bg-[#0066CC]">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left text-xs font-bold text-white uppercase border-r border-blue-400">
+                            Item
+                          </th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-20">
+                            Current
+                          </th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-16">
+                            Max.
+                          </th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase w-20">
+                            Order
+                          </th>
                         </tr>
-                      )
-                    })}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {prods.map((product) => {
+                          const po = productOrders[product.id]
+                          const current = po?.current ?? ''
+                          const orderQty = po?.order ?? 0
+
+                          return (
+                            <tr key={product.id} className="hover:bg-blue-50">
+                              <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
+                                {product.name}
+                              </td>
+                              <td className="px-2 py-1 border-r border-gray-200">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={product.maxQuantity}
+                                  value={current}
+                                  onChange={(e) =>
+                                    updateProductOrder(
+                                      product.id,
+                                      'current',
+                                      e.target.value === ''
+                                        ? null
+                                        : parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                                />
+                              </td>
+                              <td className="px-2 py-1 text-center text-xs font-medium text-gray-900 border-r border-gray-200">
+                                {product.maxQuantity}
+                              </td>
+                              <td className="px-2 py-1">
+                                <div className="w-full text-center text-xs font-semibold text-gray-900">
+                                  {orderQty > 0 ? orderQty : ''}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Estimated Order Summary - Condensed */}
+        {/* Estimated Order Summary */}
         {getOrderedItems().length > 0 && (
           <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
-            <h2 className="text-sm font-bold text-[#0066CC] mb-2">Estimated Order Summary</h2>
+            <h2 className="text-sm font-bold text-[#0066CC] mb-2">
+              Estimated Order Summary
+            </h2>
             <div className="space-y-1 text-xs">
               {getOrderedItems().map((item) => (
                 <div key={item.productId} className="flex justify-between">
@@ -453,7 +511,7 @@ export default function ADCSupplyPage() {
               <div className="border-t pt-1 mt-1 flex justify-between">
                 <span className="font-bold text-[#0066CC]">Subtotal:</span>
                 <span className="font-bold text-[#0066CC]">
-                  {formatCurrency(getSubtotalCents())}
+                  {formatCurrency(calculateSubtotal())}
                 </span>
               </div>
             </div>
@@ -465,14 +523,14 @@ export default function ADCSupplyPage() {
           <button
             type="button"
             onClick={() => router.push('/orders')}
-            className="px-4 py-2 border border-gray-300 rounded text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
+            className="px-4 py-2 border-2 border-gray-300 rounded-md text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-2 bg-[#0066CC] text-white font-bold text-sm rounded hover:bg-[#0052A3] disabled:opacity-50 transition-colors shadow"
+            className="px-4 py-2 bg-[#0066CC] text-white text-sm font-bold rounded-md hover:bg-[#0052A3] disabled:opacity-50 transition-colors shadow-md"
           >
             {submitting ? 'Submitting...' : 'Submit Order'}
           </button>
@@ -488,9 +546,9 @@ export default function ADCSupplyPage() {
                 Confirm Order Submission
               </h2>
               <p className="text-gray-700 mb-6">
-                Are you ready to submit this order? An email will be sent to our fulfillment team.
+                Are you ready to submit this Ecom Ebooks order? An email will be sent to our fulfillment team.
               </p>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
                   <span className="text-xs text-gray-500">Temporary Password</span> BIGBLUE
@@ -514,7 +572,7 @@ export default function ADCSupplyPage() {
                   <p className="text-red-600 text-sm mt-1 text-left">{passwordError}</p>
                 )}
               </div>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={handleCancelConfirm}
@@ -575,15 +633,12 @@ export default function ADCSupplyPage() {
                 Order Successful!
               </h2>
               <p className="text-gray-700 mb-6">
-                Your ADC Supply order has been submitted successfully.
+                Your Ecom Ebooks order has been submitted successfully.
                 {createdOrderId && (
                   <span className="block mt-1 text-sm text-gray-600">
                     Order #{createdOrderId}
                   </span>
                 )}
-                <span className="block mt-3 text-sm text-gray-600">
-                  Please reach out to our fulfillment team for any issues or delays.
-                </span>
               </p>
 
               <div className="space-y-3">
@@ -619,3 +674,4 @@ export default function ADCSupplyPage() {
     </div>
   )
 }
+

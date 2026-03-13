@@ -24,7 +24,7 @@ interface ProductOrder {
   category: string
   unitPriceCents: number
   maxQuantity: number
-  current: number
+  current: number | null
   order: number
 }
 
@@ -82,7 +82,7 @@ export default function ADCMaintenancePage() {
           category: product.category,
           unitPriceCents: product.unitPriceCents,
           maxQuantity: product.maxQuantity,
-          current: 0,
+          current: null,
           order: 0,
         }
       })
@@ -120,18 +120,37 @@ export default function ADCMaintenancePage() {
     }
   }
 
-  const updateProductOrder = (productId: number, field: 'current' | 'order', value: number) => {
-    setProductOrders((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [field]: Math.max(0, value),
-      },
-    }))
+  const updateProductOrder = (productId: number, field: 'current', value: number | null) => {
+    setProductOrders((prev) => {
+      const existing = prev[productId]
+      if (!existing) return prev
+
+      const nextCurrent =
+        value === null
+          ? null
+          : Math.min(Math.max(0, value), existing.maxQuantity)
+      const autoOrder =
+        nextCurrent === null ? 0 : Math.max(0, existing.maxQuantity - nextCurrent)
+
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          current: nextCurrent,
+          order: autoOrder,
+        },
+      }
+    })
   }
 
   const getOrderedItems = () => {
-    return Object.values(productOrders).filter((po) => po.order > 0)
+    return Object.values(productOrders)
+      .filter((po) => po.current !== null)
+      .map((po) => {
+        const current = po.current ?? 0
+        const order = po.maxQuantity - current
+        return { ...po, order }
+      })
   }
 
   const getSubtotalCents = () => {
@@ -385,12 +404,13 @@ export default function ADCMaintenancePage() {
                             <input
                               type="number"
                               min="0"
-                              value={po.current || ''}
+                              max={product.maxQuantity}
+                              value={po.current ?? ''}
                               onChange={(e) =>
                                 updateProductOrder(
                                   product.id,
                                   'current',
-                                  parseInt(e.target.value) || 0
+                                  e.target.value === '' ? null : parseInt(e.target.value) || 0
                                 )
                               }
                               className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
@@ -401,21 +421,9 @@ export default function ADCMaintenancePage() {
                             {product.maxQuantity}
                           </td>
                           <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              min="0"
-                              max={product.maxQuantity}
-                              value={po.order || ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'order',
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
+                            <div className="w-full text-center text-xs font-semibold text-gray-900">
+                              {po.order}
+                            </div>
                           </td>
                         </tr>
                       )

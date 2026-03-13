@@ -24,8 +24,98 @@ interface ProductOrder {
   category: string
   unitPriceCents: number
   maxQuantity: number
-  current: number
+  current: number | null
   order: number
+}
+
+// Explicit display order for store supply items (by product name)
+const PRODUCT_DISPLAY_ORDER: Record<string, number> = {
+  'Copy Paper': 1,
+  'Clear Barbs': 2,
+  'Super Slices': 3,
+  'Garment Guns': 4,
+  'Garment Needles': 5,
+  'Furniture Tags (book)': 6,
+  'Sizing Rings (S–XL)': 7,
+  'Sizing Ring Squares (S–XL)': 8,
+  "Men's Sizing Rings": 9,
+  "Women's Sizing Rings": 10,
+  "Women's Sizing Ring Squares": 11,
+  "Children's Sizing Rings": 12,
+  'Large Rubberbands': 13,
+  'ECOMM Dymo Labels': 14,
+  'ECOMM Jewelry Bags (bundle)': 15,
+  'ECOMM Seals (bag of 100)': 16,
+  'ECOMM Tags (box of 1000)': 17,
+  'ECOMM Zip Ties (bag of 1000)': 18,
+  'Clear 8" Zipties': 19,
+  '9 Volt Batteries': 20,
+  'AA Batteries': 21,
+  'AAA Batteries': 22,
+  'C Batteries': 23,
+  'Shirt Hanger Grips': 24,
+  'Window Squeegee': 25,
+  'Sterilization Tags (250)': 26,
+  'Sterifab Dispenser': 27,
+  'Safety Labels (sheet of 15)': 28,
+  'Scotch Tape': 29,
+  'Yellow Tape': 30,
+  'Dry Erase Black': 31,
+  'Dry Erase Green': 32,
+  'Dry Erase Red': 33,
+  'Ballpoint Pens': 34,
+  'Highlighters (pack of 6 colors)': 35,
+  'Silver Markers': 36,
+  'Red Markers': 37,
+  'Black Markers': 38,
+  'Counterfeit Markers': 39,
+  'Magnum Markers': 40,
+  'Star Post-Its': 41,
+  'White Out': 42,
+  'Scissors': 43,
+  'Wire Cutters': 44,
+  'Staplers': 45,
+  'Staples': 46,
+  'Safety Box Cutter': 47,
+  'Vacuum Belts': 48,
+  'Truck Seals': 49,
+  'Gloves Heavy Duty – M (one pair)': 50,
+  'Gloves Heavy Duty – L (one pair)': 51,
+  'Gloves Heavy Duty – XL (one pair)': 52,
+  'Nylon Gloves – S (pack of 12)': 53,
+  'Nylon Gloves – M (pack of 12)': 54,
+  'Nylon Gloves – L (pack of 12)': 55,
+  'Nylon Gloves – XL (pack of 12)': 56,
+  'Orange Stickers (roll)': 57,
+  'Disposable Masks': 58,
+  'Goggles': 59,
+  'Sortkwik Fingertip Moistener': 60,
+  'Sizing and Colorization Charts': 61,
+  'White Tags (case)': 62,
+  'White Stickers (case)': 63,
+  'Red Tags (case)': 64,
+  'Red Stickers (case)': 65,
+  'Yellow Tags (case)': 66,
+  'Yellow Stickers (case)': 67,
+  'Green Tags (case)': 68,
+  'Green Stickers (case)': 69,
+  'Blue Tags (case)': 70,
+  'Blue Stickers (case)': 71,
+  'Reusable Bags – Large Design': 72,
+  'Reusable Bags – Small Blue': 73,
+  'Thermal Paper': 74,
+  'Rubberbands': 75,
+  'Nitrile Gloves – S (case of 1000)': 76,
+  'Nitrile Gloves – M (case of 1000)': 77,
+  'Nitrile Gloves – L (case of 1000)': 78,
+  'Nitrile Gloves – XL (case of 1000)': 79,
+  'Sterifab': 80,
+  "Children's Hangers": 81,
+  'Shirt Hangers': 82,
+  'Pant Hangers': 83,
+  'Aprons': 84,
+  'Baseball Caps': 85,
+  'Beanies': 86,
 }
 
 // Helper function to get today's date in local timezone (YYYY-MM-DD format)
@@ -75,7 +165,7 @@ export default function NewOrderPage() {
           category: product.category,
           unitPriceCents: product.unitPriceCents,
           maxQuantity: product.maxQuantity,
-          current: 0,
+          current: null,
           order: 0,
         }
       })
@@ -113,18 +203,38 @@ export default function NewOrderPage() {
     }
   }
 
-  const updateProductOrder = (productId: number, field: 'current' | 'order', value: number) => {
-    setProductOrders((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [field]: Math.max(0, value),
-      },
-    }))
+  const updateProductOrder = (productId: number, field: 'current', value: number | null) => {
+    setProductOrders((prev) => {
+      const existing = prev[productId]
+      if (!existing) return prev
+
+      const nextCurrent =
+        value === null
+          ? null
+          : Math.min(Math.max(0, value), existing.maxQuantity)
+
+      const autoOrder =
+        nextCurrent === null ? 0 : Math.max(0, existing.maxQuantity - nextCurrent)
+
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          current: nextCurrent,
+          order: autoOrder,
+        },
+      }
+    })
   }
 
   const getOrderedItems = () => {
-    return Object.values(productOrders).filter((po) => po.order > 0)
+    return Object.values(productOrders)
+      .filter((po) => po.current !== null)
+      .map((po) => {
+        const current = po.current ?? 0
+        const order = po.maxQuantity - current
+        return { ...po, order }
+      })
   }
 
   const calculateSubtotal = () => {
@@ -258,13 +368,15 @@ export default function NewOrderPage() {
     return `$${(cents / 100).toFixed(2)}`
   }
 
-  const productsByCategory = Array.isArray(products) ? products.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = []
-    }
-    acc[product.category].push(product)
-    return acc
-  }, {} as Record<string, Product[]>) : {}
+  const sortedProducts: Product[] = Array.isArray(products)
+    ? [...products].sort((a, b) => {
+        const orderA = PRODUCT_DISPLAY_ORDER[a.name] ?? 9999
+        const orderB = PRODUCT_DISPLAY_ORDER[b.name] ?? 9999
+        if (orderA !== orderB) return orderA - orderB
+        // Fallback stable sort by name if not explicitly ordered or same index
+        return a.name.localeCompare(b.name)
+      })
+    : []
 
   if (loading) {
     return (
@@ -365,62 +477,37 @@ export default function NewOrderPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(productsByCategory).map(([category, prods]) => (
-                  <React.Fragment key={category}>
-                    <tr className="bg-[#E6F2FF]">
-                      <td colSpan={4} className="px-2 py-1 font-bold text-xs text-[#0066CC]">
-                        {category}
+                {sortedProducts.map((product) => {
+                  const po = productOrders[product.id]
+                  if (!po) return null
+                  return (
+                    <tr key={product.id} className="hover:bg-blue-50">
+                      <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
+                        {product.name}
+                      </td>
+                      <td className="px-2 py-1 border-r border-gray-200">
+                        <input
+                          type="number"
+                          min="0"
+                          value={po.current ?? ''}
+                          onChange={(e) =>
+                            updateProductOrder(product.id, 'current', e.target.value === '' ? null : parseInt(e.target.value) || 0)
+                          }
+                          className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
+                        {product.maxQuantity}
+                      </td>
+                      <td className="px-2 py-1">
+                        <div className="w-full text-center text-xs font-semibold text-gray-900">
+                          {po.order}
+                        </div>
                       </td>
                     </tr>
-                    {prods.map((product) => {
-                      const po = productOrders[product.id]
-                      if (!po) return null
-                      return (
-                        <tr key={product.id} className="hover:bg-blue-50">
-                          <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
-                            {product.name}
-                          </td>
-                          <td className="px-2 py-1 border-r border-gray-200">
-                            <input
-                              type="number"
-                              min="0"
-                              value={po.current || ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'current',
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
-                            {product.maxQuantity}
-                          </td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              min="0"
-                              max={product.maxQuantity}
-                              value={po.order || ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'order',
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </React.Fragment>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json()
-    const { unitPriceCents, maxQuantity } = body
+    const { unitPriceCents, maxQuantity, totalInStock } = body
 
     const updateData: any = {}
 
@@ -30,6 +30,16 @@ export async function PATCH(
         )
       }
       updateData.maxQuantity = parseInt(maxQuantity)
+    }
+
+    if (totalInStock !== undefined) {
+      if (totalInStock < 0 || !Number.isInteger(totalInStock)) {
+        return NextResponse.json(
+          { error: 'Invalid totalInStock value' },
+          { status: 400 }
+        )
+      }
+      updateData.totalInStock = parseInt(totalInStock)
     }
 
     if (Object.keys(updateData).length === 0) {

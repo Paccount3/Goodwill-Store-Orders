@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
     // Calculate subtotal
     let subtotalCents = 0
     const orderLinesData = []
+    const stockUpdates: { productId: number; newTotalInStock: number }[] = []
 
     for (const item of lineItems) {
       const product = await prisma.product.findUnique({
@@ -162,6 +163,11 @@ export async function POST(request: NextRequest) {
         color,
         style,
       })
+
+      // Prepare stock update (do not go below zero)
+      const currentStock = (product as any).totalInStock ?? 0
+      const newTotalInStock = Math.max(0, currentStock - orderQuantity)
+      stockUpdates.push({ productId: product.id, newTotalInStock })
     }
 
     // Always use today's date at midnight UTC to ensure consistent storage
@@ -173,22 +179,36 @@ export async function POST(request: NextRequest) {
     // Create date at midnight UTC (this ensures the date stored matches the date displayed)
     const todayUTC = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
     
-    const order = await prisma.order.create({
-      data: {
-        storeId: parseInt(storeId),
-        managerName,
-        orderDate: todayUTC, // Always use today's date at UTC midnight
-        notes: notes || null,
-        orderType: orderType || null,
-        subtotalCents,
-        orderLines: {
-          create: orderLinesData,
+    const order = await prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.order.create({
+        data: {
+          storeId: parseInt(storeId),
+          managerName,
+          orderDate: todayUTC, // Always use today's date at UTC midnight
+          notes: notes || null,
+          orderType: orderType || null,
+          subtotalCents,
+          orderLines: {
+            create: orderLinesData,
+          },
         },
-      },
-      include: {
-        store: true,
-        orderLines: true,
-      },
+        include: {
+          store: true,
+          orderLines: true,
+        },
+      })
+
+      // Apply stock updates for each product
+      await Promise.all(
+        stockUpdates.map((update) =>
+          tx.product.update({
+            where: { id: update.productId },
+            data: { totalInStock: update.newTotalInStock },
+          })
+        )
+      )
+
+      return createdOrder
     })
 
     return NextResponse.json(order, { status: 201 })

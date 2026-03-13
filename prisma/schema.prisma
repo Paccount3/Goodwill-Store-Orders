@@ -23,6 +23,7 @@ model Product {
   category        String
   unitPriceCents  Int
   maxQuantity     Int          @default(5)
+  totalInStock    Int          @default(100)
   isActive        Boolean     @default(true)
   isUniform       Boolean     @default(false)
   availableSizes  String?     // JSON array: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]

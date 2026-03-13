@@ -2,6 +2,88 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+const ECOM_WAREHOUSE_CATEGORY = 'Ecom Warehouse'
+const ECOM_BOOKS_CATEGORY = 'Ecom Books'
+
+async function seedEcomWarehouseProducts(prismaInstance: PrismaClient) {
+  await prismaInstance.product.createMany({
+    data: [
+      { name: 'Copy Paper (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 5, isActive: true },
+      { name: 'Rubberbands (bag) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 1, isActive: true },
+      { name: 'E-COMM Tags (box of 1000) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Black Pens (box of 36) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Black Markers (box of 36) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Highlighters (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Multi-Color Dry Erase (pack of 16) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Multi-Color Post-Its (box of 24) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 2, isActive: true },
+      { name: 'AA Batteries (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1200, maxQuantity: 2, isActive: true },
+      { name: 'AAA Batteries (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1200, maxQuantity: 2, isActive: true },
+      { name: 'C Batteries (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 2, isActive: true },
+      { name: '9 Volt Batteries (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 2, isActive: true },
+      { name: 'Nitrile Gloves – S (case of 1000) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves – M (case of 1000) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves – L (case of 1000) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves – XL (case of 1000) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves – S (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves – M (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves – L (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves – XL (case) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Fragile Labels (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 400, maxQuantity: 10, isActive: true },
+      { name: 'MaxGear Thermal Labels (4x6) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 800, maxQuantity: 5, isActive: true },
+      { name: 'Betckey Thermal Labels (1 1/8 x 3 1/2) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 5, isActive: true },
+      { name: '6x9 Bubble Mailers (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 300, maxQuantity: 4, isActive: true },
+      { name: '10.5X16 Bubble Mailers (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 4, isActive: true },
+      { name: '10x13 Poly Mailers (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 400, maxQuantity: 4, isActive: true },
+      { name: '14.5x19 Poly Mailers (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 4, isActive: true },
+      { name: '12x16 Morepack Bags (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 4, isActive: true },
+      { name: 'Wireless Computer Mouse (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 2500, maxQuantity: 3, isActive: true },
+      { name: 'Tera Handheld Scanner (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 8000, maxQuantity: 3, isActive: true },
+      { name: 'Clear Plastic Handbags (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 400, maxQuantity: 10, isActive: true },
+      { name: 'Safety Box Cutter (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 600, maxQuantity: 5, isActive: true },
+      { name: 'Scissors (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Stapler (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Staples (box) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 400, maxQuantity: 2, isActive: true },
+      { name: 'Wire Cutters (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 1000, maxQuantity: 3, isActive: true },
+      { name: 'Tape Measures (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 800, maxQuantity: 5, isActive: true },
+      { name: 'Safety Labels (sheet of 15 stickers) (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 300, maxQuantity: 1, isActive: true },
+      { name: 'Disposable Masks (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 300, maxQuantity: 2, isActive: true },
+      { name: 'Truck Seals (Ecom Warehouse)', category: ECOM_WAREHOUSE_CATEGORY, unitPriceCents: 500, maxQuantity: 45, isActive: true },
+    ],
+  })
+  console.log('Created Ecom Warehouse products')
+}
+
+async function seedEcomBooksProducts(prismaInstance: PrismaClient) {
+  await prismaInstance.product.createMany({
+    data: [
+      { name: 'Copy Paper - White (case) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Copy Paper - Red (ream) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Copy Paper - Yellow (ream) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Copy Paper - Green (ream) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Copy Paper - Blue (ream) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Black Pens (box of 36) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Black Markers (box of 36) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Multi-Color Post-Its (box of 24) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves - S (case) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves - M (case) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves - L (case) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Nylon Gloves - XL (case) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 1, isActive: true },
+      { name: 'Disposable Masks (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 300, maxQuantity: 2, isActive: true },
+      { name: 'MaxGear Thermal Labels (4x6) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 800, maxQuantity: 3, isActive: true },
+      { name: 'Thermal Receipt Paper (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 400, maxQuantity: 3, isActive: true },
+      { name: '10x13 Poly Mailers (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 300, maxQuantity: 5, isActive: true },
+      { name: '14.5x19 Poly Mailers (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 500, maxQuantity: 2, isActive: true },
+      { name: 'Tera Handheld Scanner (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 8000, maxQuantity: 2, isActive: true },
+      { name: 'Safety Box Cutter (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 600, maxQuantity: 3, isActive: true },
+      { name: 'Scissors (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Stapler (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Staples (box) (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 400, maxQuantity: 1, isActive: true },
+      { name: 'Tape Measures (Ecom Books)', category: ECOM_BOOKS_CATEGORY, unitPriceCents: 800, maxQuantity: 2, isActive: true },
+    ],
+  })
+  console.log('Created Ecom Books products')
+}
+
 async function main() {
   console.log('Seeding database...')
 
@@ -9,9 +91,26 @@ async function main() {
   const storeCount = await prisma.store.count()
   const productCount = await prisma.product.count()
 
-  // Only seed if database is empty
+  // If database already has data, only seed Ecom Warehouse / Ecom Books products if missing
   if (storeCount > 0 || productCount > 0) {
-    console.log(`Database already has data (${storeCount} stores, ${productCount} products). Skipping seed.`)
+    const ewhCount = await prisma.product.count({ where: { category: ECOM_WAREHOUSE_CATEGORY } })
+    const ebooksCount = await prisma.product.count({ where: { category: ECOM_BOOKS_CATEGORY } })
+
+    if (ewhCount > 0 && ebooksCount > 0) {
+      console.log(`Database already has data. Ecom Warehouse (${ewhCount}) and Ecom Books (${ebooksCount}) products exist. Skipping seed.`)
+      return
+    }
+
+    if (ewhCount === 0) {
+      console.log('Database has data but no Ecom Warehouse products. Seeding Ecom Warehouse...')
+      await seedEcomWarehouseProducts(prisma)
+    }
+
+    if (ebooksCount === 0) {
+      console.log('Database has data but no Ecom Books products. Seeding Ecom Books...')
+      await seedEcomBooksProducts(prisma)
+    }
+
     return
   }
 
@@ -366,6 +465,9 @@ async function main() {
   })
 
   console.log('Created Housatonic Maintenance products')
+  await seedEcomWarehouseProducts(prisma)
+  await seedEcomBooksProducts(prisma)
+
   console.log('Seeding completed!')
 }
 
