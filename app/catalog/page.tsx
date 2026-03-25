@@ -1,6 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import {
+  CATALOG_GROUP_OPTIONS,
+  ADD_PRODUCT_DB_CATEGORY_OPTIONS,
+  STORE_SUPPLY_DB_CATEGORIES,
+  ORDER_FORM_DB_CATEGORY_ORDER,
+  DB_CATEGORY_SECTION_LABEL,
+} from '@/lib/catalog-order-forms'
 
 interface Product {
   id: number
@@ -10,9 +18,31 @@ interface Product {
   maxQuantity: number
   isActive: boolean
   totalInStock?: number
+  isUniform?: boolean
+  availableSizes?: string | null
+  availableColors?: string | null
+  style?: string | null
 }
 
-// Explicit display order for Store Supplies items (by product name)
+function formatUniformListField(raw: string | null | undefined): string {
+  if (!raw?.trim()) return '—'
+  try {
+    const v = JSON.parse(raw)
+    if (Array.isArray(v)) return v.join(', ')
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      return Object.keys(v as Record<string, unknown>).join(', ')
+    }
+    return String(v)
+  } catch {
+    return raw
+  }
+}
+
+function getCategoryCatalogLabel(dbCategory: string): string {
+  return DB_CATEGORY_SECTION_LABEL[dbCategory] ?? dbCategory
+}
+
+// Explicit display order for Store Supply aggregate items (by product name)
 const STORE_SUPPLY_DISPLAY_ORDER: Record<string, number> = {
   'Copy Paper': 1,
   'Clear Barbs': 2,
@@ -173,10 +203,94 @@ const ECOM_EBOOKS_DISPLAY_ORDER: Record<string, number> = {
   'Tape Measures (Ecom Books)': 23,
 }
 
+// Explicit display order for Ebooks Maintenance items (by product name, including suffix)
+const EBOOKS_MAINTENANCE_DISPLAY_ORDER: Record<string, number> = {
+  'Paper Towels (case) (Ebooks Maintenance)': 1,
+  'Time Mist Refills - Clean Linen (case) (Ebooks Maintenance)': 2,
+  'Clear Trash Bags - Small (case) (Ebooks Maintenance)': 3,
+  'Fantastik Multi-Surface Disinfectant with triggers (Ebooks Maintenance)': 4,
+  'Masking Tape (case) (Ebooks Maintenance)': 5,
+  'Dust Mop Head (dry) 36\" (each) (Ebooks Maintenance)': 6,
+  'Backbraces (each) (Ebooks Maintenance)': 7,
+  'Push Broom 24\" - refill (single) - order as needed (Ebooks Maintenance)': 8,
+  'Heavy Duty Street Broom (complete) (Ebooks Maintenance)': 9,
+  'Dust Mop (complete set) (Ebooks Maintenance)': 10,
+  'Dustpan & Brush (normal length broom) (Ebooks Maintenance)': 11,
+  'Paper Plates (case) (Ebooks Maintenance)': 12,
+  'Spoons - plastic (Ebooks Maintenance)': 13,
+  'Forks - plastic (Ebooks Maintenance)': 14,
+  'Knives - plastic (Ebooks Maintenance)': 15,
+  'Hand Sanitizer - single pump bottle (Ebooks Maintenance)': 16,
+  'Nitrile Gloves - Small (case of 1000) (Ebooks Maintenance)': 17,
+  'Nitrile Gloves - Medium (case of 1000) (Ebooks Maintenance)': 18,
+  'Nitrile Gloves - Large (case of 1000) (Ebooks Maintenance)': 19,
+  'Nitrile Gloves - XL (case of 1000) (Ebooks Maintenance)': 20,
+}
+
+const ECOMM_MAINTENANCE_DISPLAY_ORDER: Record<string, number> = {
+  'Toilet Paper (case) (Ecomm Maintenance)': 1,
+  'Toilet Paper Dispensers (single) (Ecomm Maintenance)': 2,
+  'Toilet Brush (Ecomm Maintenance)': 3,
+  'Urinal Block with Screen (case) (Ecomm Maintenance)': 4,
+  'Paper Towels (case) (Ecomm Maintenance)': 5,
+  'Paper Towel Dispensers (single) (Ecomm Maintenance)': 6,
+  'Antibacterial Hand Foam Soap (case) (Ecomm Maintenance)': 7,
+  'Soap Dispensers (single) (Ecomm Maintenance)': 8,
+  'Disinfectant Foam Cleaner (case) (Ecomm Maintenance)': 9,
+  'Dust Mop Treatment (case) (Ecomm Maintenance)': 10,
+  'Bowl Cleaner (Ecomm Maintenance)': 11,
+  'Time Mist Refills - Cherry (case) (Ecomm Maintenance)': 12,
+  'Time Mist Refills - Citrus (case) (Ecomm Maintenance)': 13,
+  'Time Mist Refills - Clean Linen (case) (Ecomm Maintenance)': 14,
+  'Time Mist Dispensers (single) (Ecomm Maintenance)': 15,
+  'Goo Off (can) (Ecomm Maintenance)': 16,
+  'Spray Bottle & Trigger (single) (Ecomm Maintenance)': 17,
+  'Glass Cleaner (case) (Ecomm Maintenance)': 18,
+  'Pine Kleen (case) (Ecomm Maintenance)': 19,
+  'Clear Trash Bags - Large (case) (Ecomm Maintenance)': 20,
+  'Clear Trash Bags - Small (case) (Ecomm Maintenance)': 21,
+  'Comet Cleaner with bleach 3-30 with triggers (Ecomm Maintenance)': 22,
+  'Fantastik Multi-Surface Disinfectant with triggers (Ecomm Maintenance)': 23,
+  'One Shot (case) (Ecomm Maintenance)': 24,
+  'Twine (case) (Ecomm Maintenance)': 25,
+  'Masking Tape (case) (Ecomm Maintenance)': 26,
+  'Sanitary Napkin Bags (case) (Ecomm Maintenance)': 27,
+  'Cotton Mop Heads 32oz (case) (Ecomm Maintenance)': 28,
+  'Dust Mop Head (dry) 36" (each) (Ecomm Maintenance)': 29,
+  'Backbraces (each) (Ecomm Maintenance)': 30,
+  'Push Broom 24" - refill (single) - order as needed (Ecomm Maintenance)': 31,
+  'Floor Mop (complete) (Ecomm Maintenance)': 32,
+  'Heavy Duty Street Broom (complete) (Ecomm Maintenance)': 33,
+  'Long Handle Scraper (each) (Ecomm Maintenance)': 34,
+  'Dust Mop (complete set) (Ecomm Maintenance)': 35,
+  'Dustpan & Brush (normal length broom) (Ecomm Maintenance)': 36,
+  'Mop Bucket (Ecomm Maintenance)': 37,
+  'Plastic Cups (case) (Ecomm Maintenance)': 38,
+  'Paper Plates (case) (Ecomm Maintenance)': 39,
+  'Spoons - plastic (Ecomm Maintenance)': 40,
+  'Forks - plastic (Ecomm Maintenance)': 41,
+  'Knives - plastic (Ecomm Maintenance)': 42,
+  'Blades for Long Handle Scraper (pack) (Ecomm Maintenance)': 43,
+  'Hand Sanitizer Foam Ref. (case) (Ecomm Maintenance)': 44,
+  'Hand Sanitizer - single pump bottle (Ecomm Maintenance)': 45,
+  'Nitrile Gloves - Small (case of 1000) (Ecomm Maintenance)': 46,
+  'Nitrile Gloves - Medium (case of 1000) (Ecomm Maintenance)': 47,
+  'Nitrile Gloves - Large (case of 1000) (Ecomm Maintenance)': 48,
+  'Nitrile Gloves - XL (case of 1000) (Ecomm Maintenance)': 49,
+  'Newsprint (bundle) (Ecomm Maintenance)': 50,
+}
+
 export default function CatalogPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Admin password must be entered on every page-open/refresh.
+  const [adminGateLoading, setAdminGateLoading] = useState(true)
+
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCatalogGroup, setSelectedCatalogGroup] = useState('')
   const [search, setSearch] = useState('')
   const [editingPrice, setEditingPrice] = useState<Record<number, number>>({})
   const [editingMaxQuantity, setEditingMaxQuantity] = useState<Record<number, number>>({})
@@ -191,14 +305,47 @@ export default function CatalogPage() {
   })
 
   useEffect(() => {
-    fetchProducts()
-  }, [selectedCategory, search])
+    let cancelled = false
+
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/admin/status', { cache: 'no-store' })
+        const data = await res.json()
+
+        if (cancelled) return
+
+        if (!data?.authed) {
+          const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+          const redirectTo = `${pathname}${searchString}`
+          router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+          return
+        }
+
+        setAdminGateLoading(false)
+        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
+      } catch {
+        if (cancelled) return
+        const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+        const redirectTo = `${pathname}${searchString}`
+        router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+      }
+    }
+
+    checkAdmin()
+    return () => {
+      cancelled = true
+    }
+  }, [pathname, router, searchParams])
+
+  useEffect(() => {
+    if (!adminGateLoading) fetchProducts()
+  }, [selectedCatalogGroup, search, adminGateLoading])
 
   const fetchProducts = async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (selectedCategory) params.append('category', selectedCategory)
+      if (selectedCatalogGroup) params.append('catalogGroup', selectedCatalogGroup)
       if (search) params.append('search', search)
       params.append('activeOnly', 'false') // Show all products for management
 
@@ -439,19 +586,8 @@ export default function CatalogPage() {
     }
   }
 
-  const categories = Array.from(new Set(products.map((p) => p.category)))
-
-  // Store Supplies categories (these will be shown as a single flat list)
-  const storeSupplyCategories = new Set<string>([
-    'General Supplies',
-    'Labels, Tape, & Office Supplies',
-    'Gloves & PPE',
-    'Stickers & Tags',
-    'Bags & Paper',
-    'Hangers',
-    'Store Apparel',
-    'Miscellaneous',
-  ])
+  // Store Supply aggregate categories (shown as a single flat list)
+  const storeSupplyCategories = new Set<string>(STORE_SUPPLY_DB_CATEGORIES)
 
   const storeSupplyProducts = products
     .filter((p) => storeSupplyCategories.has(p.category))
@@ -462,7 +598,7 @@ export default function CatalogPage() {
       return a.name.localeCompare(b.name)
     })
 
-  // Keep ADC / Housatonic / Ecom Warehouse (and any other) categories grouped as before
+  // Keep ADC / Store Maintenance / Ecom Warehouse (and any other) categories grouped as before
   const productsByCategory = products.reduce((acc, product) => {
     if (storeSupplyCategories.has(product.category)) {
       return acc
@@ -492,6 +628,37 @@ export default function CatalogPage() {
       if (orderA !== orderB) return orderA - orderB
       return a.name.localeCompare(b.name)
     })
+  }
+
+  // Apply explicit ordering for Ebooks Maintenance category to match its form
+  if (productsByCategory['Ebooks Maintenance']) {
+    productsByCategory['Ebooks Maintenance'] = [...productsByCategory['Ebooks Maintenance']].sort((a, b) => {
+      const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
+      const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
+      if (orderA !== orderB) return orderA - orderB
+      return a.name.localeCompare(b.name)
+    })
+  }
+
+  if (productsByCategory['Ecomm Maintenance']) {
+    productsByCategory['Ecomm Maintenance'] = [...productsByCategory['Ecomm Maintenance']].sort((a, b) => {
+      const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
+      const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
+      if (orderA !== orderB) return orderA - orderB
+      return a.name.localeCompare(b.name)
+    })
+  }
+
+  const formCategoryOrderMap = new Map<string, number>(
+    ORDER_FORM_DB_CATEGORY_ORDER.map((k, i) => [k, i])
+  )
+  const orderedNonStoreCategoryKeys = Object.keys(productsByCategory).sort(
+    (a, b) =>
+      (formCategoryOrderMap.get(a) ?? 999) - (formCategoryOrderMap.get(b) ?? 999)
+  )
+
+  if (adminGateLoading) {
+    return null
   }
 
   return (
@@ -536,8 +703,10 @@ export default function CatalogPage() {
                 list="categories"
               />
               <datalist id="categories">
-                {categories.map((cat) => (
-                  <option key={cat} value={cat} />
+                {ADD_PRODUCT_DB_CATEGORY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
               </datalist>
             </div>
@@ -597,17 +766,17 @@ export default function CatalogPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1">
-              Category
+              Order form
             </label>
             <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              value={selectedCatalogGroup}
+              onChange={(e) => setSelectedCatalogGroup(e.target.value)}
               className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
             >
-              <option value="">All Categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              <option value="">All order forms</option>
+              {CATALOG_GROUP_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
@@ -615,12 +784,12 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* Store Supplies (flat list, no categories) */}
+      {/* Store Supply aggregate (flat list, no categories) */}
       {loading ? null : storeSupplyProducts.length > 0 && (
         <div className="mb-6">
           <div className="bg-white shadow-lg rounded-lg p-6 border border-gray-200">
             <h2 className="text-xl font-bold text-[#0066CC] mb-4">
-              Store Supplies
+              Store Supply Order
             </h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -809,15 +978,18 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* Products by Category (ADC, Housatonic, uniforms, etc.) */}
+      {/* Products by Category (ADC, Store Maintenance, Staff Apparel, e‑com, etc.) */}
       {loading ? (
         <div className="text-center py-8">Loading products...</div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(productsByCategory).map(([category, prods]) => (
+          {orderedNonStoreCategoryKeys.map((category) => {
+            const prods = productsByCategory[category]
+            const isStaffApparelSection = category === 'Staff Apparel'
+            return (
             <div key={category} className="bg-white shadow-lg rounded-lg p-6 border border-gray-200">
               <h2 className="text-xl font-bold text-[#0066CC] mb-4">
-                {category}
+                {getCategoryCatalogLabel(category)}
               </h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -826,6 +998,19 @@ export default function CatalogPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
                         Product Name
                       </th>
+                      {isStaffApparelSection && (
+                        <>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
+                            Sizes
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
+                            Colors
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
+                            Style
+                          </th>
+                        </>
+                      )}
                       <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase">
                         Unit Price
                       </th>
@@ -852,6 +1037,19 @@ export default function CatalogPage() {
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
                             {product.name}
                           </td>
+                          {isStaffApparelSection && (
+                            <>
+                              <td className="px-4 py-3 text-sm text-gray-800 max-w-[14rem]">
+                                {formatUniformListField(product.availableSizes)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-800 max-w-[14rem]">
+                                {formatUniformListField(product.availableColors)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-800">
+                                {product.style?.trim() ? product.style : '—'}
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-3 text-sm text-right">
                             {isEditing ? (
                               <div className="flex items-center justify-end gap-2">
@@ -1003,8 +1201,11 @@ export default function CatalogPage() {
                 </table>
               </div>
             </div>
-          ))}
-          {Object.keys(productsByCategory).length === 0 && (
+            )
+          })}
+          {!loading &&
+            storeSupplyProducts.length === 0 &&
+            orderedNonStoreCategoryKeys.length === 0 && (
             <div className="text-center py-8 text-gray-900 font-medium">
               No products found
             </div>

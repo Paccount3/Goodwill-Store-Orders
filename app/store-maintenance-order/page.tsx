@@ -1,7 +1,18 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  ConfirmOrderModal,
+  OrderSubmitErrorModal,
+  OrderSuccessModal,
+  OrderLoadingModal,
+} from '@/app/components/StoreOrderFlowModals'
+import {
+  isSuccessfulOrderResponse,
+  orderSubmitErrorUserMessage,
+} from '@/lib/order-flow'
+import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 
 interface Store {
   id: number
@@ -37,7 +48,7 @@ const getTodayLocalDate = () => {
   return `${year}-${month}-${day}`
 }
 
-export default function HousatonicMaintenancePage() {
+export default function StoreMaintenanceOrderPage() {
   const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -49,6 +60,8 @@ export default function HousatonicMaintenancePage() {
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [orderSubmitError, setOrderSubmitError] = useState('')
 
   const [formData, setFormData] = useState({
     storeId: '',
@@ -69,6 +82,8 @@ export default function HousatonicMaintenancePage() {
     if (stores.length > 0 && !formData.storeId) {
       setFormData(prev => ({ ...prev, storeId: stores[0].id.toString() }))
     }
+    // Intentionally only when stores load; adding formData.storeId would overwrite user selection
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stores])
 
   useEffect(() => {
@@ -102,7 +117,9 @@ export default function HousatonicMaintenancePage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&category=Housatonic Maintenance')
+      const res = await fetch(
+        `/api/products?activeOnly=true&category=${encodeURIComponent(STORE_MAINTENANCE_ORDER_CATEGORY)}`
+      )
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         console.error('API Error Response:', errorData)
@@ -157,6 +174,10 @@ export default function HousatonicMaintenancePage() {
     return getOrderedItems().reduce((sum, item) => {
       return sum + item.unitPriceCents * item.order
     }, 0)
+  }
+
+  const formatCurrency = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,24 +246,36 @@ export default function HousatonicMaintenancePage() {
         }),
       })
 
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create order')
+      let payload: unknown
+      try {
+        payload = await res.json()
+      } catch {
+        throw new Error(`Invalid response from server (${res.status})`)
       }
 
-      const order = await res.json()
-      setCreatedOrderId(order.id)
-      setSubmitting(false)
+      if (!res.ok) {
+        const errObj = payload as { error?: string; details?: string }
+        throw new Error(errObj.error || errObj.details || `Request failed (${res.status})`)
+      }
 
-      // Show loading animation for 1 second before showing success
+      if (!isSuccessfulOrderResponse(payload)) {
+        throw new Error('Order was not saved correctly. Please try again.')
+      }
+
+      setCreatedOrderId(payload.id)
+      setSubmitting(false)
       setShowLoadingAnimation(true)
       setTimeout(() => {
         setShowLoadingAnimation(false)
         setShowSuccessModal(true)
       }, 1000)
-    } catch (error: any) {
-      alert(error.message || 'Failed to create order')
+    } catch (error: unknown) {
+      const technical =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : String(error)
+      setOrderSubmitError(orderSubmitErrorUserMessage(technical))
+      setShowErrorModal(true)
       setSubmitting(false)
+      setShowLoadingAnimation(false)
     }
   }
 
@@ -272,7 +305,7 @@ export default function HousatonicMaintenancePage() {
           category: product.category,
           unitPriceCents: product.unitPriceCents,
           maxQuantity: product.maxQuantity,
-          current: 0,
+          current: null,
           order: 0,
         }
       })
@@ -281,31 +314,24 @@ export default function HousatonicMaintenancePage() {
 
     setShowSuccessModal(false)
     setCreatedOrderId(null)
-    // Scroll to top
+    setShowErrorModal(false)
+    setOrderSubmitError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleGoToOrdersHub = () => {
-    router.push('/orders')
   }
 
   const handlePrintOrder = () => {
     if (createdOrderId) {
-      router.push(`/orders/${createdOrderId}/invoice`)
+      window.open(`${window.location.origin}/orders/${createdOrderId}/invoice`, '_blank', 'noopener,noreferrer')
     }
   }
 
-  const formatCurrency = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`
-  }
-
-  const productsByCategory = Array.isArray(products) ? products.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = []
-    }
-    acc[product.category].push(product)
-    return acc
-  }, {} as Record<string, Product[]>) : {}
+  const orderSuccessMeta = useMemo(() => {
+    if (!createdOrderId) return null
+    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
+    const st = stores.find((s) => s.id === Number(storeIdToUse))
+    const storeDisplay = st ? `${st.storeNumber} - ${st.name}` : 'Unknown store'
+    return { storeDisplay, orderTypeLabel: 'Store Maintenance Order' as const }
+  }, [createdOrderId, stores, formData.storeId])
 
   if (loading) {
     return (
@@ -332,7 +358,7 @@ export default function HousatonicMaintenancePage() {
                 value="HM"
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
               >
-                <option value="HM">Store Maintenance</option>
+                <option value="HM">Store Maintenance Order</option>
               </select>
             </div>
             <div>
@@ -385,51 +411,43 @@ export default function HousatonicMaintenancePage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(productsByCategory).map(([category, prods]) => (
-                  <React.Fragment key={category}>
-                    <tr className="bg-[#E6F2FF]">
-                      <td colSpan={4} className="px-2 py-1 font-bold text-xs text-[#0066CC]">
-                        {category}
-                      </td>
-                    </tr>
-                    {prods.map((product) => {
-                      const po = productOrders[product.id]
-                      if (!po) return null
-                      return (
-                        <tr key={product.id} className="hover:bg-blue-50">
-                          <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
-                            {product.name}
-                          </td>
-                          <td className="px-2 py-1 border-r border-gray-200">
-                            <input
-                              type="number"
-                              min="0"
-                              max={product.maxQuantity}
-                              value={po.current ?? ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'current',
-                                  e.target.value === '' ? null : parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
-                            {product.maxQuantity}
-                          </td>
-                          <td className="px-2 py-1">
-                            <div className="w-full text-center text-xs font-semibold text-gray-900">
-                              {po.order}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </React.Fragment>
-                ))}
+                {Array.isArray(products) &&
+                  products.map((product) => {
+                    const po = productOrders[product.id]
+                    if (!po) return null
+                    return (
+                      <tr key={product.id} className="hover:bg-blue-50">
+                        <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
+                          {product.name}
+                        </td>
+                        <td className="px-2 py-1 border-r border-gray-200">
+                          <input
+                            type="number"
+                            min="0"
+                            max={product.maxQuantity}
+                            value={po.current ?? ''}
+                            onChange={(e) =>
+                              updateProductOrder(
+                                product.id,
+                                'current',
+                                e.target.value === '' ? null : parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
+                          {product.maxQuantity}
+                        </td>
+                        <td className="px-2 py-1">
+                          <div className="w-full text-center text-xs font-semibold text-gray-900">
+                            {po.order}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
           </div>
@@ -464,7 +482,7 @@ export default function HousatonicMaintenancePage() {
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => router.push('/orders')}
+            onClick={() => router.push('/')}
             className="px-4 py-2 border border-gray-300 rounded text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
           >
             Cancel
@@ -479,142 +497,39 @@ export default function HousatonicMaintenancePage() {
         </div>
       </form>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-4">
-                Confirm Order Submission
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Are you ready to submit this order? An email will be sent to our fulfillment team.
-              </p>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
-                  <span className="text-xs text-gray-500">Temporary Password</span> BIGBLUE
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setPasswordError('')
-                  }}
-                  placeholder="Enter password"
-                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleConfirmSubmit()
-                    }
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-red-600 text-sm mt-1 text-left">{passwordError}</p>
-                )}
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelConfirm}
-                  className="flex-1 bg-white border-2 border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmSubmit}
-                  disabled={submitting}
-                  className="flex-1 bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Confirm & Submit'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmOrderModal
+        open={showConfirmModal}
+        password={password}
+        passwordError={passwordError}
+        submitting={submitting}
+        onPasswordChange={(v) => {
+          setPassword(v)
+          setPasswordError('')
+        }}
+        onCancel={handleCancelConfirm}
+        onConfirm={handleConfirmSubmit}
+      />
 
-      {/* Loading Animation Modal */}
-      {showLoadingAnimation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-8">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-20 w-20 mb-4">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#0066CC] border-t-transparent"></div>
-              </div>
-              <p className="text-lg font-semibold text-gray-900">
-                Processing your order...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderSubmitErrorModal
+        open={showErrorModal}
+        message={orderSubmitError}
+        onClose={() => {
+          setShowErrorModal(false)
+          setOrderSubmitError('')
+        }}
+      />
 
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <svg
-                  className="h-8 w-8 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-2">
-                Order Successful!
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Your Store Maintenance order has been submitted successfully.
-                {createdOrderId && (
-                  <span className="block mt-1 text-sm text-gray-600">
-                    Order #{createdOrderId}
-                  </span>
-                )}
-                <span className="block mt-3 text-sm text-gray-600">
-                  Please reach out to our fulfillment team for any issues or delays.
-                </span>
-              </p>
+      <OrderLoadingModal open={showLoadingAnimation} />
 
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-900 mb-4">
-                  What would you like to do next?
-                </p>
-
-                <button
-                  onClick={handleOrderAgain}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Order Again
-                </button>
-
-                <button
-                  onClick={handleGoToOrdersHub}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Go to Orders Hub
-                </button>
-
-                <button
-                  onClick={handlePrintOrder}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Print Order
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {showSuccessModal && createdOrderId && orderSuccessMeta && (
+        <OrderSuccessModal
+          open
+          orderId={createdOrderId}
+          storeDisplay={orderSuccessMeta.storeDisplay}
+          orderTypeLabel={orderSuccessMeta.orderTypeLabel}
+          onOrderAgain={handleOrderAgain}
+          onPrintCopy={handlePrintOrder}
+        />
       )}
     </div>
   )

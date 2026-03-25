@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Store {
@@ -44,14 +44,53 @@ interface Order {
 export default function OrderDetailsPage() {
   const router = useRouter()
   const params = useParams()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Admin password must be entered on every page-open/refresh.
+  const [adminGateLoading, setAdminGateLoading] = useState(true)
+
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (params.id) {
+    let cancelled = false
+
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/admin/status', { cache: 'no-store' })
+        const data = await res.json()
+
+        if (cancelled) return
+
+        if (!data?.authed) {
+          const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+          const redirectTo = `${pathname}${searchString}`
+          router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+          return
+        }
+
+        setAdminGateLoading(false)
+        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
+      } catch {
+        if (cancelled) return
+        const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+        const redirectTo = `${pathname}${searchString}`
+        router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+      }
+    }
+
+    checkAdmin()
+    return () => {
+      cancelled = true
+    }
+  }, [pathname, router, searchParams])
+
+  useEffect(() => {
+    if (!adminGateLoading) {
       fetchOrder()
     }
-  }, [params.id])
+  }, [params.id, adminGateLoading])
 
   const fetchOrder = async () => {
     try {
@@ -118,6 +157,10 @@ export default function OrderDetailsPage() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  if (adminGateLoading) {
+    return null
   }
 
   if (loading) {

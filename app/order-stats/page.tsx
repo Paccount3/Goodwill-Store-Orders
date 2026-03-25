@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
+import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 interface Store {
   id: number
@@ -45,7 +47,7 @@ interface InsightsData {
   }>
 }
 
-// Explicit display order for Store Supplies items (by product name)
+// Explicit display order for Store Supply aggregate items (by product name)
 const STORE_SUPPLY_DISPLAY_ORDER: Record<string, number> = {
   'Copy Paper': 1,
   'Clear Barbs': 2,
@@ -206,12 +208,95 @@ const ECOM_EBOOKS_DISPLAY_ORDER: Record<string, number> = {
   'Tape Measures (Ecom Books)': 23,
 }
 
+const EBOOKS_MAINTENANCE_DISPLAY_ORDER: Record<string, number> = {
+  'Paper Towels (case) (Ebooks Maintenance)': 1,
+  'Time Mist Refills - Clean Linen (case) (Ebooks Maintenance)': 2,
+  'Clear Trash Bags - Small (case) (Ebooks Maintenance)': 3,
+  'Fantastik Multi-Surface Disinfectant with triggers (Ebooks Maintenance)': 4,
+  'Masking Tape (case) (Ebooks Maintenance)': 5,
+  'Dust Mop Head (dry) 36" (each) (Ebooks Maintenance)': 6,
+  'Backbraces (each) (Ebooks Maintenance)': 7,
+  'Push Broom 24" - refill (single) - order as needed (Ebooks Maintenance)': 8,
+  'Heavy Duty Street Broom (complete) (Ebooks Maintenance)': 9,
+  'Dust Mop (complete set) (Ebooks Maintenance)': 10,
+  'Dustpan & Brush (normal length broom) (Ebooks Maintenance)': 11,
+  'Paper Plates (case) (Ebooks Maintenance)': 12,
+  'Spoons - plastic (Ebooks Maintenance)': 13,
+  'Forks - plastic (Ebooks Maintenance)': 14,
+  'Knives - plastic (Ebooks Maintenance)': 15,
+  'Hand Sanitizer - single pump bottle (Ebooks Maintenance)': 16,
+  'Nitrile Gloves - Small (case of 1000) (Ebooks Maintenance)': 17,
+  'Nitrile Gloves - Medium (case of 1000) (Ebooks Maintenance)': 18,
+  'Nitrile Gloves - Large (case of 1000) (Ebooks Maintenance)': 19,
+  'Nitrile Gloves - XL (case of 1000) (Ebooks Maintenance)': 20,
+}
+
+const ECOMM_MAINTENANCE_DISPLAY_ORDER: Record<string, number> = {
+  'Toilet Paper (case) (Ecomm Maintenance)': 1,
+  'Toilet Paper Dispensers (single) (Ecomm Maintenance)': 2,
+  'Toilet Brush (Ecomm Maintenance)': 3,
+  'Urinal Block with Screen (case) (Ecomm Maintenance)': 4,
+  'Paper Towels (case) (Ecomm Maintenance)': 5,
+  'Paper Towel Dispensers (single) (Ecomm Maintenance)': 6,
+  'Antibacterial Hand Foam Soap (case) (Ecomm Maintenance)': 7,
+  'Soap Dispensers (single) (Ecomm Maintenance)': 8,
+  'Disinfectant Foam Cleaner (case) (Ecomm Maintenance)': 9,
+  'Dust Mop Treatment (case) (Ecomm Maintenance)': 10,
+  'Bowl Cleaner (Ecomm Maintenance)': 11,
+  'Time Mist Refills - Cherry (case) (Ecomm Maintenance)': 12,
+  'Time Mist Refills - Citrus (case) (Ecomm Maintenance)': 13,
+  'Time Mist Refills - Clean Linen (case) (Ecomm Maintenance)': 14,
+  'Time Mist Dispensers (single) (Ecomm Maintenance)': 15,
+  'Goo Off (can) (Ecomm Maintenance)': 16,
+  'Spray Bottle & Trigger (single) (Ecomm Maintenance)': 17,
+  'Glass Cleaner (case) (Ecomm Maintenance)': 18,
+  'Pine Kleen (case) (Ecomm Maintenance)': 19,
+  'Clear Trash Bags - Large (case) (Ecomm Maintenance)': 20,
+  'Clear Trash Bags - Small (case) (Ecomm Maintenance)': 21,
+  'Comet Cleaner with bleach 3-30 with triggers (Ecomm Maintenance)': 22,
+  'Fantastik Multi-Surface Disinfectant with triggers (Ecomm Maintenance)': 23,
+  'One Shot (case) (Ecomm Maintenance)': 24,
+  'Twine (case) (Ecomm Maintenance)': 25,
+  'Masking Tape (case) (Ecomm Maintenance)': 26,
+  'Sanitary Napkin Bags (case) (Ecomm Maintenance)': 27,
+  'Cotton Mop Heads 32oz (case) (Ecomm Maintenance)': 28,
+  'Dust Mop Head (dry) 36" (each) (Ecomm Maintenance)': 29,
+  'Backbraces (each) (Ecomm Maintenance)': 30,
+  'Push Broom 24" - refill (single) - order as needed (Ecomm Maintenance)': 31,
+  'Floor Mop (complete) (Ecomm Maintenance)': 32,
+  'Heavy Duty Street Broom (complete) (Ecomm Maintenance)': 33,
+  'Long Handle Scraper (each) (Ecomm Maintenance)': 34,
+  'Dust Mop (complete set) (Ecomm Maintenance)': 35,
+  'Dustpan & Brush (normal length broom) (Ecomm Maintenance)': 36,
+  'Mop Bucket (Ecomm Maintenance)': 37,
+  'Plastic Cups (case) (Ecomm Maintenance)': 38,
+  'Paper Plates (case) (Ecomm Maintenance)': 39,
+  'Spoons - plastic (Ecomm Maintenance)': 40,
+  'Forks - plastic (Ecomm Maintenance)': 41,
+  'Knives - plastic (Ecomm Maintenance)': 42,
+  'Blades for Long Handle Scraper (pack) (Ecomm Maintenance)': 43,
+  'Hand Sanitizer Foam Ref. (case) (Ecomm Maintenance)': 44,
+  'Hand Sanitizer - single pump bottle (Ecomm Maintenance)': 45,
+  'Nitrile Gloves - Small (case of 1000) (Ecomm Maintenance)': 46,
+  'Nitrile Gloves - Medium (case of 1000) (Ecomm Maintenance)': 47,
+  'Nitrile Gloves - Large (case of 1000) (Ecomm Maintenance)': 48,
+  'Nitrile Gloves - XL (case of 1000) (Ecomm Maintenance)': 49,
+  'Newsprint (bundle) (Ecomm Maintenance)': 50,
+}
+
 export default function OrderStatsPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Admin password must be entered on every page-open/refresh.
+  const [adminGateLoading, setAdminGateLoading] = useState(true)
+
   const [data, setData] = useState<AggregatedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('Store Supplies')
+  const [selectedCategory, setSelectedCategory] = useState<string>('Store Supply')
   const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([])
   const [allStores, setAllStores] = useState<Store[]>([])
   const [showStoreFilter, setShowStoreFilter] = useState(false)
@@ -220,17 +305,52 @@ export default function OrderStatsPage() {
   const [loadingInsights, setLoadingInsights] = useState(false)
 
   const getCategoryLabel = (category: string) => {
-    if (category === 'Housatonic Maintenance') return 'Store Maintenance'
+    if (category === STORE_MAINTENANCE_ORDER_CATEGORY) return 'Store Maintenance Order'
     return category
   }
 
   useEffect(() => {
-    fetchStores()
-  }, [])
+    let cancelled = false
+
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/admin/status', { cache: 'no-store' })
+        const data = await res.json()
+
+        if (cancelled) return
+
+        if (!data?.authed) {
+          const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+          const redirectTo = `${pathname}${searchString}`
+          router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+          return
+        }
+
+        setAdminGateLoading(false)
+        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
+      } catch {
+        if (cancelled) return
+        const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+        const redirectTo = `${pathname}${searchString}`
+        router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+      }
+    }
+
+    checkAdmin()
+    return () => {
+      cancelled = true
+    }
+  }, [pathname, router, searchParams])
 
   useEffect(() => {
-    fetchData()
-  }, [selectedYear, selectedMonth, selectedCategory, selectedStoreIds])
+    if (!adminGateLoading) fetchStores()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminGateLoading])
+
+  useEffect(() => {
+    if (!adminGateLoading) fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth, selectedCategory, selectedStoreIds, adminGateLoading])
 
   const fetchStores = async () => {
     try {
@@ -238,7 +358,13 @@ export default function OrderStatsPage() {
       const data = await res.json()
       setAllStores(data)
       // Initialize with all stores selected only if not a non-store category
-      if (selectedCategory !== 'ADC Supply' && selectedCategory !== 'ADC Maintenance' && selectedCategory !== 'Housatonic Maintenance') {
+      if (
+        selectedCategory !== 'ADC Supply' &&
+        selectedCategory !== 'ADC Maintenance' &&
+        selectedCategory !== STORE_MAINTENANCE_ORDER_CATEGORY &&
+        selectedCategory !== 'Ebooks Maintenance' &&
+        selectedCategory !== 'Ecomm Maintenance'
+      ) {
         setSelectedStoreIds(data.map((store: Store) => store.id))
       }
     } catch (error) {
@@ -248,7 +374,12 @@ export default function OrderStatsPage() {
 
   const fetchData = async () => {
     // Check if this is a non-store category
-    const isNonStoreCat = selectedCategory === 'ADC Supply' || selectedCategory === 'ADC Maintenance' || selectedCategory === 'Housatonic Maintenance'
+    const isNonStoreCat =
+      selectedCategory === 'ADC Supply' ||
+      selectedCategory === 'ADC Maintenance' ||
+      selectedCategory === STORE_MAINTENANCE_ORDER_CATEGORY ||
+      selectedCategory === 'Ebooks Maintenance' ||
+      selectedCategory === 'Ecomm Maintenance'
     
     // Don't fetch if no stores are selected for non-store categories
     if (!isNonStoreCat && selectedStoreIds.length === 0) {
@@ -280,7 +411,12 @@ export default function OrderStatsPage() {
     }
   }
 
-  const isNonStoreCategory = selectedCategory === 'ADC Supply' || selectedCategory === 'ADC Maintenance' || selectedCategory === 'Housatonic Maintenance'
+  const isNonStoreCategory =
+    selectedCategory === 'ADC Supply' ||
+    selectedCategory === 'ADC Maintenance' ||
+    selectedCategory === STORE_MAINTENANCE_ORDER_CATEGORY ||
+    selectedCategory === 'Ebooks Maintenance' ||
+    selectedCategory === 'Ecomm Maintenance'
 
   const handleStoreToggle = (storeId: number) => {
     setSelectedStoreIds(prev => {
@@ -354,9 +490,27 @@ export default function OrderStatsPage() {
     })
   }
 
-  // Flattened, ordered list for Store Supplies (no categories)
+  if (productsByCategory['Ebooks Maintenance']) {
+    productsByCategory['Ebooks Maintenance'] = [...productsByCategory['Ebooks Maintenance']].sort((a, b) => {
+      const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
+      const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
+      if (orderA !== orderB) return orderA - orderB
+      return a.productName.localeCompare(b.productName)
+    })
+  }
+
+  if (productsByCategory['Ecomm Maintenance']) {
+    productsByCategory['Ecomm Maintenance'] = [...productsByCategory['Ecomm Maintenance']].sort((a, b) => {
+      const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
+      const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
+      if (orderA !== orderB) return orderA - orderB
+      return a.productName.localeCompare(b.productName)
+    })
+  }
+
+  // Flattened, ordered list for Store Supply aggregate (no categories)
   const storeSupplyProducts: ProductStats[] =
-    selectedCategory === 'Store Supplies' && data
+    selectedCategory === 'Store Supply' && data
       ? [...data.products].sort((a, b) => {
           const orderA = STORE_SUPPLY_DISPLAY_ORDER[a.productName] ?? 9999
           const orderB = STORE_SUPPLY_DISPLAY_ORDER[b.productName] ?? 9999
@@ -422,8 +576,8 @@ export default function OrderStatsPage() {
     const headerRow = ['Item', ...data.stores.map(store => store.name), 'TOTAL']
     worksheetData.push(headerRow)
 
-    if (selectedCategory === 'Store Supplies') {
-      // Flat list for Store Supplies, no categories
+    if (selectedCategory === 'Store Supply') {
+      // Flat list for Store Supply aggregate, no categories
       storeSupplyProducts.forEach((product) => {
         const productRow = [
           product.productName,
@@ -455,6 +609,20 @@ export default function OrderStatsPage() {
             ? [...prods].sort((a, b) => {
                 const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.productName] ?? 9999
                 const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.productName] ?? 9999
+                if (orderA !== orderB) return orderA - orderB
+                return a.productName.localeCompare(b.productName)
+              })
+            : category === 'Ebooks Maintenance'
+            ? [...prods].sort((a, b) => {
+                const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
+                const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
+                if (orderA !== orderB) return orderA - orderB
+                return a.productName.localeCompare(b.productName)
+              })
+            : category === 'Ecomm Maintenance'
+            ? [...prods].sort((a, b) => {
+                const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
+                const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
                 if (orderA !== orderB) return orderA - orderB
                 return a.productName.localeCompare(b.productName)
               })
@@ -499,6 +667,10 @@ export default function OrderStatsPage() {
     XLSX.writeFile(wb, filename)
   }
 
+  if (adminGateLoading) {
+    return null
+  }
+
   return (
     <div className="max-w-[95vw] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -513,7 +685,13 @@ export default function OrderStatsPage() {
               onChange={(e) => {
                 setSelectedCategory(e.target.value)
                 // Reset store filter when category changes
-                if (e.target.value === 'ADC Supply' || e.target.value === 'ADC Maintenance' || e.target.value === 'Housatonic Maintenance') {
+                if (
+                  e.target.value === 'ADC Supply' ||
+                  e.target.value === 'ADC Maintenance' ||
+                  e.target.value === STORE_MAINTENANCE_ORDER_CATEGORY ||
+                  e.target.value === 'Ebooks Maintenance' ||
+                  e.target.value === 'Ecomm Maintenance'
+                ) {
                   setSelectedStoreIds([])
                 } else {
                   setSelectedStoreIds(allStores.map(store => store.id))
@@ -521,13 +699,15 @@ export default function OrderStatsPage() {
               }}
               className="border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
             >
-              <option value="Store Supplies">Store Supplies</option>
-              <option value="Staff Uniforms">Staff Uniforms</option>
+              <option value="Store Supply">Store Supply</option>
+              <option value={STORE_MAINTENANCE_ORDER_CATEGORY}>Store Maintenance Order</option>
+              <option value="Staff Apparel">Staff Apparel</option>
               <option value="ADC Supply">ADC Supply</option>
               <option value="ADC Maintenance">ADC Maintenance</option>
-              <option value="Housatonic Maintenance">Store Maintenance</option>
               <option value="Ecom Warehouse">Ecom Warehouse</option>
               <option value="Ecom Books">Ecom Books</option>
+              <option value="Ebooks Maintenance">Ebooks Maintenance</option>
+              <option value="Ecomm Maintenance">Ecomm Maintenance</option>
             </select>
           </div>
           {!isNonStoreCategory && (
@@ -684,7 +864,7 @@ export default function OrderStatsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {selectedCategory === 'Store Supplies'
+                {selectedCategory === 'Store Supply'
                   ? storeSupplyProducts.map((product) => (
                       <tr key={product.productId} className="hover:bg-blue-50">
                         <td className="px-3 py-1 text-xs font-medium text-gray-900 border-r border-gray-200 sticky left-0 bg-white z-10 min-w-[200px]">

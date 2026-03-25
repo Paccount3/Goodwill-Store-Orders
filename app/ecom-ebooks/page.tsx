@@ -1,7 +1,17 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  ConfirmOrderModal,
+  OrderSubmitErrorModal,
+  OrderSuccessModal,
+  OrderLoadingModal,
+} from '@/app/components/StoreOrderFlowModals'
+import {
+  isSuccessfulOrderResponse,
+  orderSubmitErrorUserMessage,
+} from '@/lib/order-flow'
 
 interface Store {
   id: number
@@ -76,6 +86,8 @@ export default function EcomEbooksPage() {
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [orderSubmitError, setOrderSubmitError] = useState('')
 
   const [formData, setFormData] = useState({
     storeId: '',
@@ -187,11 +199,15 @@ export default function EcomEbooksPage() {
     )
   }
 
+  const formatCurrency = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.managerName) {
-      alert('Please fill in all required fields')
+    if (!formData.managerName.trim()) {
+      alert('Please enter the manager name')
       return
     }
 
@@ -231,7 +247,7 @@ export default function EcomEbooksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: storeIdToUse,
-          managerName: formData.managerName,
+          managerName: formData.managerName.trim(),
           orderDate: formData.orderDate,
           notes: formData.notes,
           orderType: 'EEB',
@@ -243,23 +259,36 @@ export default function EcomEbooksPage() {
         }),
       })
 
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create order')
+      let payload: unknown
+      try {
+        payload = await res.json()
+      } catch {
+        throw new Error(`Invalid response from server (${res.status})`)
       }
 
-      const order = await res.json()
-      setCreatedOrderId(order.id)
-      setSubmitting(false)
+      if (!res.ok) {
+        const errObj = payload as { error?: string; details?: string }
+        throw new Error(errObj.error || errObj.details || `Request failed (${res.status})`)
+      }
 
+      if (!isSuccessfulOrderResponse(payload)) {
+        throw new Error('Order was not saved correctly. Please try again.')
+      }
+
+      setCreatedOrderId(payload.id)
+      setSubmitting(false)
       setShowLoadingAnimation(true)
       setTimeout(() => {
         setShowLoadingAnimation(false)
         setShowSuccessModal(true)
       }, 1000)
-    } catch (error: any) {
-      alert(error.message || 'Failed to create order')
+    } catch (error: unknown) {
+      const technical =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : String(error)
+      setOrderSubmitError(orderSubmitErrorUserMessage(technical))
+      setShowErrorModal(true)
       setSubmitting(false)
+      setShowLoadingAnimation(false)
     }
   }
 
@@ -287,7 +316,7 @@ export default function EcomEbooksPage() {
           category: product.category,
           unitPriceCents: product.unitPriceCents,
           maxQuantity: product.maxQuantity,
-          current: 0,
+          current: null,
           order: 0,
         }
       })
@@ -296,22 +325,21 @@ export default function EcomEbooksPage() {
 
     setShowSuccessModal(false)
     setCreatedOrderId(null)
+    setShowErrorModal(false)
+    setOrderSubmitError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleGoToOrdersHub = () => {
-    router.push('/orders')
   }
 
   const handlePrintOrder = () => {
     if (createdOrderId) {
-      router.push(`/orders/${createdOrderId}/invoice`)
+      window.open(`${window.location.origin}/orders/${createdOrderId}/invoice`, '_blank', 'noopener,noreferrer')
     }
   }
 
-  const formatCurrency = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`
-  }
+  const orderSuccessMeta = useMemo(() => {
+    if (!createdOrderId) return null
+    return { storeDisplay: '', orderTypeLabel: 'Ecom Ebooks Order' as const }
+  }, [createdOrderId])
 
   const sortedProducts = Array.isArray(products)
     ? [...products].sort((a, b) => {
@@ -342,7 +370,7 @@ export default function EcomEbooksPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <h1 className="text-2xl font-bold text-[#0066CC] mb-4">
-        Ecom Ebooks Supply Order
+        EBooks Supply Order
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -358,20 +386,22 @@ export default function EcomEbooksPage() {
                 value="EEB"
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
               >
-                <option value="EEB">Ecom Ebooks</option>
+                <option value="EEB">EBooks Supply</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Manager Name
+                Manager Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
+                required
                 value={formData.managerName}
                 onChange={(e) =>
                   setFormData({ ...formData, managerName: e.target.value })
                 }
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                placeholder="Required"
               />
             </div>
           </div>
@@ -522,7 +552,7 @@ export default function EcomEbooksPage() {
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => router.push('/orders')}
+            onClick={() => router.push('/')}
             className="px-4 py-2 border-2 border-gray-300 rounded-md text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
           >
             Cancel
@@ -537,139 +567,39 @@ export default function EcomEbooksPage() {
         </div>
       </form>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-4">
-                Confirm Order Submission
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Are you ready to submit this Ecom Ebooks order? An email will be sent to our fulfillment team.
-              </p>
+      <ConfirmOrderModal
+        open={showConfirmModal}
+        password={password}
+        passwordError={passwordError}
+        submitting={submitting}
+        onPasswordChange={(v) => {
+          setPassword(v)
+          setPasswordError('')
+        }}
+        onCancel={handleCancelConfirm}
+        onConfirm={handleConfirmSubmit}
+      />
 
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
-                  <span className="text-xs text-gray-500">Temporary Password</span> BIGBLUE
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setPasswordError('')
-                  }}
-                  placeholder="Enter password"
-                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleConfirmSubmit()
-                    }
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-red-600 text-sm mt-1 text-left">{passwordError}</p>
-                )}
-              </div>
+      <OrderSubmitErrorModal
+        open={showErrorModal}
+        message={orderSubmitError}
+        onClose={() => {
+          setShowErrorModal(false)
+          setOrderSubmitError('')
+        }}
+      />
 
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelConfirm}
-                  className="flex-1 bg-white border-2 border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmSubmit}
-                  disabled={submitting}
-                  className="flex-1 bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Confirm & Submit'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderLoadingModal open={showLoadingAnimation} />
 
-      {/* Loading Animation Modal */}
-      {showLoadingAnimation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-8">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-20 w-20 mb-4">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#0066CC] border-t-transparent"></div>
-              </div>
-              <p className="text-lg font-semibold text-gray-900">
-                Processing your order...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <svg
-                  className="h-8 w-8 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-2">
-                Order Successful!
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Your Ecom Ebooks order has been submitted successfully.
-                {createdOrderId && (
-                  <span className="block mt-1 text-sm text-gray-600">
-                    Order #{createdOrderId}
-                  </span>
-                )}
-              </p>
-
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-900 mb-4">
-                  What would you like to do next?
-                </p>
-
-                <button
-                  onClick={handleOrderAgain}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Order Again
-                </button>
-
-                <button
-                  onClick={handleGoToOrdersHub}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Go to Orders Hub
-                </button>
-
-                <button
-                  onClick={handlePrintOrder}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Print Order
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {showSuccessModal && createdOrderId && orderSuccessMeta && (
+        <OrderSuccessModal
+          open
+          orderId={createdOrderId}
+          storeDisplay={orderSuccessMeta.storeDisplay}
+          orderTypeLabel={orderSuccessMeta.orderTypeLabel}
+          onOrderAgain={handleOrderAgain}
+          onPrintCopy={handlePrintOrder}
+        />
       )}
     </div>
   )

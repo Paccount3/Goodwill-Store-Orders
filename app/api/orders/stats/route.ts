@@ -102,8 +102,12 @@ export async function GET(request: NextRequest) {
     const orderTypeCounts: Record<string, number> = {}
     orders.forEach((order) => {
       const orderType = order.orderType || 'NSSO' // Default for old orders
-      // Map database values to display values
-      const displayType = orderType === 'ADC_S' ? 'ADC S' : orderType === 'ADC_M' ? 'ADC M' : orderType
+      let displayType: string
+      if (orderType === 'ADC_S') displayType = 'ADC S'
+      else if (orderType === 'ADC_M') displayType = 'ADC M'
+      else if (orderType === 'NSSO') displayType = 'SSO'
+      else if (orderType === 'SU') displayType = 'SA'
+      else displayType = orderType
       orderTypeCounts[displayType] = (orderTypeCounts[displayType] || 0) + 1
     })
 

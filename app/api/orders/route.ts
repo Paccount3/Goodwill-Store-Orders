@@ -65,6 +65,10 @@ export async function GET(request: NextRequest) {
         'ADC S': 'ADC_S',
         'ADC M': 'ADC_M',
         'HM': 'HM',
+        EWH: 'EWH',
+        EEB: 'EEB',
+        EBM: 'EBM',
+        ECM: 'ECM',
       }
       where.orderType = orderTypeMap[orderType] || orderType
     }

@@ -14,6 +14,7 @@ model Store {
   id          Int      @id @default(autoincrement())
   storeNumber String   @unique
   name        String
+  sortOrder   Int      @default(0)
   orders      Order[]
 }
 

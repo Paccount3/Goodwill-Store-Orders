@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,24 +48,33 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if this is an ADC/Housatonic category (not associated with stores)
-    const isNonStoreCategory = category === 'ADC Supply' || category === 'ADC Maintenance' || category === 'Housatonic Maintenance'
+    // Check if this is a non-store category (not associated with stores)
+    const isNonStoreCategory =
+      category === 'ADC Supply' ||
+      category === 'ADC Maintenance' ||
+      category === STORE_MAINTENANCE_ORDER_CATEGORY ||
+      category === 'Ebooks Maintenance' ||
+      category === 'Ecomm Maintenance'
 
     // Filter orders by category if specified
     let filteredOrders = orders
     if (category) {
-      if (category === 'Store Supplies') {
-        // Exclude ADC Supply, ADC Maintenance, Housatonic Maintenance, and Staff Uniforms
+      if (category === 'Store Supply') {
+        // Exclude non-store and specialized categories
         filteredOrders = orders.filter((order) =>
           order.orderLines.some(
             (line) =>
               line.product.category !== 'ADC Supply' &&
               line.product.category !== 'ADC Maintenance' &&
-              line.product.category !== 'Housatonic Maintenance' &&
-              line.product.category !== 'Staff Uniforms'
+              line.product.category !== STORE_MAINTENANCE_ORDER_CATEGORY &&
+              line.product.category !== 'Staff Apparel' &&
+              line.product.category !== 'Ecom Warehouse' &&
+              line.product.category !== 'Ecom Books' &&
+              line.product.category !== 'Ebooks Maintenance' &&
+              line.product.category !== 'Ecomm Maintenance'
           )
         )
-      } else if (category === 'Staff Uniforms') {
+      } else if (category === 'Staff Apparel') {
         // Only include orders with uniform products
         filteredOrders = orders.filter((order) =>
           order.orderLines.some((line) => line.product.isUniform === true)
@@ -90,7 +100,13 @@ export async function GET(request: NextRequest) {
       // For non-store categories, aggregate all into a single entry
       const totalSpend = filteredOrders.reduce((sum, order) => sum + order.subtotalCents, 0)
       const nonStoreDisplayName =
-        category === 'Housatonic Maintenance' ? 'Store Maintenance' : (category || 'Unknown')
+        category === STORE_MAINTENANCE_ORDER_CATEGORY
+          ? 'Store Maintenance Order'
+          : category === 'Ebooks Maintenance'
+          ? 'Ebooks Maintenance'
+          : category === 'Ecomm Maintenance'
+          ? 'Ecomm Maintenance'
+          : (category || 'Unknown')
       storeSpend[-1] = {
         storeId: -1,
         storeName: nonStoreDisplayName,
@@ -128,16 +144,16 @@ export async function GET(request: NextRequest) {
       order.orderLines.forEach((line) => {
         // Only include lines that match the category filter
         if (category) {
-          if (category === 'Store Supplies') {
+          if (category === 'Store Supply') {
             if (
               line.product.category === 'ADC Supply' ||
               line.product.category === 'ADC Maintenance' ||
-              line.product.category === 'Housatonic Maintenance' ||
-              line.product.category === 'Staff Uniforms'
+              line.product.category === STORE_MAINTENANCE_ORDER_CATEGORY ||
+              line.product.category === 'Staff Apparel'
             ) {
               return // Skip this line
             }
-          } else if (category === 'Staff Uniforms') {
+          } else if (category === 'Staff Apparel') {
             if (line.product.isUniform !== true) {
               return // Skip this line
             }

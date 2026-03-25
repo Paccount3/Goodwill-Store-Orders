@@ -1,9 +1,15 @@
 import { PrismaClient } from '@prisma/client'
+import { STORE_MAINTENANCE_ORDER_CATEGORY } from '../lib/product-categories'
 
 const prisma = new PrismaClient()
 
+/** Legacy DB category; renamed to STORE_MAINTENANCE_ORDER_CATEGORY in migrateStoreMaintenanceCategoryName. */
+const LEGACY_STORE_MAINTENANCE_CATEGORY = 'Housatonic Maintenance'
+
 const ECOM_WAREHOUSE_CATEGORY = 'Ecom Warehouse'
 const ECOM_BOOKS_CATEGORY = 'Ecom Books'
+const EBOOKS_MAINTENANCE_CATEGORY = 'Ebooks Maintenance'
+const ECOMM_MAINTENANCE_CATEGORY = 'Ecomm Maintenance'
 
 async function seedEcomWarehouseProducts(prismaInstance: PrismaClient) {
   await prismaInstance.product.createMany({
@@ -84,20 +90,199 @@ async function seedEcomBooksProducts(prismaInstance: PrismaClient) {
   console.log('Created Ecom Books products')
 }
 
+async function seedEbooksMaintenanceProducts(prismaInstance: PrismaClient) {
+  await prismaInstance.product.createMany({
+    data: [
+      { name: 'Paper Towels (case) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 3000, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Clean Linen (case) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Clear Trash Bags - Small (case) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Fantastik Multi-Surface Disinfectant with triggers (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Masking Tape (case) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Dust Mop Head (dry) 36\" (each) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 3, isActive: true },
+      { name: 'Backbraces (each) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 3, isActive: true },
+      { name: 'Push Broom 24\" - refill (single) - order as needed (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1200, maxQuantity: 0, isActive: true },
+      { name: 'Heavy Duty Street Broom (complete) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Dust Mop (complete set) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 3000, maxQuantity: 1, isActive: true },
+      { name: 'Dustpan & Brush (normal length broom) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 2, isActive: true },
+      { name: 'Paper Plates (case) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Spoons - plastic (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Forks - plastic (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Knives - plastic (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Hand Sanitizer - single pump bottle (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 800, maxQuantity: 2, isActive: true },
+      { name: 'Nitrile Gloves - Small (case of 1000) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - Medium (case of 1000) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - Large (case of 1000) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - XL (case of 1000) (Ebooks Maintenance)', category: EBOOKS_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+    ],
+  })
+  console.log('Created Ebooks Maintenance products')
+}
+
+async function seedEcommMaintenanceProducts(prismaInstance: PrismaClient) {
+  await prismaInstance.product.createMany({
+    data: [
+      { name: 'Toilet Paper (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 5, isActive: true },
+      { name: 'Toilet Paper Dispensers (single) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 4500, maxQuantity: 1, isActive: true },
+      { name: 'Toilet Brush (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Urinal Block with Screen (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Paper Towels (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3000, maxQuantity: 4, isActive: true },
+      { name: 'Paper Towel Dispensers (single) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Antibacterial Hand Foam Soap (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3200, maxQuantity: 1, isActive: true },
+      { name: 'Soap Dispensers (single) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Disinfectant Foam Cleaner (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2800, maxQuantity: 2, isActive: true },
+      { name: 'Dust Mop Treatment (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2200, maxQuantity: 1, isActive: true },
+      { name: 'Bowl Cleaner (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1800, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Cherry (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Citrus (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Clean Linen (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Dispensers (single) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 4000, maxQuantity: 1, isActive: true },
+      { name: 'Goo Off (can) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Spray Bottle & Trigger (single) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 500, maxQuantity: 4, isActive: true },
+      { name: 'Glass Cleaner (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2400, maxQuantity: 1, isActive: true },
+      { name: 'Pine Kleen (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2200, maxQuantity: 1, isActive: true },
+      { name: 'Clear Trash Bags - Large (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 2, isActive: true },
+      { name: 'Clear Trash Bags - Small (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 2, isActive: true },
+      { name: 'Comet Cleaner with bleach 3-30 with triggers (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2600, maxQuantity: 1, isActive: true },
+      { name: 'Fantastik Multi-Surface Disinfectant with triggers (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'One Shot (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Twine (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Masking Tape (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1200, maxQuantity: 2, isActive: true },
+      { name: 'Sanitary Napkin Bags (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1800, maxQuantity: 1, isActive: true },
+      { name: 'Cotton Mop Heads 32oz (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2800, maxQuantity: 1, isActive: true },
+      { name: 'Dust Mop Head (dry) 36" (each) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 12, isActive: true },
+      { name: 'Backbraces (each) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 6, isActive: true },
+      { name: 'Push Broom 24" - refill (single) - order as needed (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1200, maxQuantity: 0, isActive: true },
+      { name: 'Floor Mop (complete) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Heavy Duty Street Broom (complete) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3500, maxQuantity: 2, isActive: true },
+      { name: 'Long Handle Scraper (each) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 3, isActive: true },
+      { name: 'Dust Mop (complete set) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 3000, maxQuantity: 3, isActive: true },
+      { name: 'Dustpan & Brush (normal length broom) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 4, isActive: true },
+      { name: 'Mop Bucket (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 2, isActive: true },
+      { name: 'Plastic Cups (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Paper Plates (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Spoons - plastic (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Forks - plastic (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Knives - plastic (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Blades for Long Handle Scraper (pack) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 4, isActive: true },
+      { name: 'Hand Sanitizer Foam Ref. (case) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 4000, maxQuantity: 1, isActive: true },
+      { name: 'Hand Sanitizer - single pump bottle (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 800, maxQuantity: 4, isActive: true },
+      { name: 'Nitrile Gloves - Small (case of 1000) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - Medium (case of 1000) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - Large (case of 1000) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Nitrile Gloves - XL (case of 1000) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Newsprint (bundle) (Ecomm Maintenance)', category: ECOMM_MAINTENANCE_CATEGORY, unitPriceCents: 500, maxQuantity: 6, isActive: true },
+    ],
+  })
+  console.log('Created Ecomm Maintenance products')
+}
+
+async function migrateProductCategoryNames(prismaInstance: PrismaClient) {
+  const result = await prismaInstance.product.updateMany({
+    where: { category: 'Staff Uniforms' },
+    data: { category: 'Staff Apparel' },
+  })
+  if (result.count > 0) {
+    console.log(`Migrated ${result.count} product(s): Staff Uniforms → Staff Apparel`)
+  }
+}
+
+/** Rename Store Maintenance product suffix (HM) → (SMO) in existing databases. */
+async function migrateStoreMaintenanceProductSuffixHmToSmo(prismaInstance: PrismaClient) {
+  const rows = await prismaInstance.product.findMany({
+    where: { category: LEGACY_STORE_MAINTENANCE_CATEGORY },
+    select: { id: true, name: true },
+  })
+  let n = 0
+  for (const row of rows) {
+    if (row.name.endsWith(' (HM)')) {
+      await prismaInstance.product.update({
+        where: { id: row.id },
+        data: { name: row.name.replace(/ \(HM\)$/, ' (SMO)') },
+      })
+      n++
+    }
+  }
+  if (n > 0) {
+    console.log(`Migrated ${n} Store Maintenance product name(s): (HM) → (SMO)`)
+  }
+}
+
+async function migrateStoreMaintenanceCategoryName(prismaInstance: PrismaClient) {
+  const result = await prismaInstance.product.updateMany({
+    where: { category: LEGACY_STORE_MAINTENANCE_CATEGORY },
+    data: { category: STORE_MAINTENANCE_ORDER_CATEGORY },
+  })
+  if (result.count > 0) {
+    console.log(
+      `Migrated ${result.count} product(s): ${LEGACY_STORE_MAINTENANCE_CATEGORY} → ${STORE_MAINTENANCE_ORDER_CATEGORY}`
+    )
+  }
+}
+
+/** Regional / HQ locations beyond core retail 01–20; inserted only if missing (does not overwrite admin edits). */
+const DEFAULT_EXTRA_STORES: { storeNumber: string; name: string }[] = [
+  { storeNumber: '21', name: 'Bridgeport Headquarters' },
+  { storeNumber: '22', name: 'Cheshire CR' },
+  { storeNumber: '23', name: 'Greenwich ADC' },
+  { storeNumber: '24', name: 'Hartford Campus' },
+  { storeNumber: '25', name: 'Manchester CR' },
+  { storeNumber: '26', name: 'Ridgefield ADC' },
+  { storeNumber: '27', name: 'Riverside ADC' },
+  { storeNumber: '28', name: 'Hartford ADC' },
+]
+
+async function migrateStoreSortOrder(prismaInstance: PrismaClient) {
+  const all = await prismaInstance.store.findMany({ orderBy: { storeNumber: 'asc' } })
+  if (all.length === 0) return
+  const allZero = all.every((s) => s.sortOrder === 0)
+  if (!allZero) return
+  for (let i = 0; i < all.length; i++) {
+    await prismaInstance.store.update({
+      where: { id: all[i].id },
+      data: { sortOrder: i },
+    })
+  }
+  console.log(`Initialized store display order (${all.length} stores)`)
+}
+
+async function ensureMissingExtraStores(prismaInstance: PrismaClient) {
+  for (const row of DEFAULT_EXTRA_STORES) {
+    const existing = await prismaInstance.store.findUnique({
+      where: { storeNumber: row.storeNumber },
+    })
+    if (!existing) {
+      const maxAgg = await prismaInstance.store.aggregate({ _max: { sortOrder: true } })
+      const nextSort = (maxAgg._max.sortOrder ?? -1) + 1
+      await prismaInstance.store.create({
+        data: { ...row, sortOrder: nextSort },
+      })
+      console.log(`Added store ${row.storeNumber} – ${row.name}`)
+    }
+  }
+}
+
 async function main() {
   console.log('Seeding database...')
+
+  await migrateProductCategoryNames(prisma)
+  await migrateStoreMaintenanceProductSuffixHmToSmo(prisma)
+  await migrateStoreMaintenanceCategoryName(prisma)
+  await migrateStoreSortOrder(prisma)
 
   // Check if database is already seeded
   const storeCount = await prisma.store.count()
   const productCount = await prisma.product.count()
 
-  // If database already has data, only seed Ecom Warehouse / Ecom Books products if missing
+  // If database already has data, only seed Ecom Warehouse / Ecom Books / Ebooks Maintenance products if missing
   if (storeCount > 0 || productCount > 0) {
     const ewhCount = await prisma.product.count({ where: { category: ECOM_WAREHOUSE_CATEGORY } })
     const ebooksCount = await prisma.product.count({ where: { category: ECOM_BOOKS_CATEGORY } })
+    const ebooksMaintCount = await prisma.product.count({ where: { category: EBOOKS_MAINTENANCE_CATEGORY } })
+    const ecommMaintCount = await prisma.product.count({ where: { category: ECOMM_MAINTENANCE_CATEGORY } })
 
-    if (ewhCount > 0 && ebooksCount > 0) {
-      console.log(`Database already has data. Ecom Warehouse (${ewhCount}) and Ecom Books (${ebooksCount}) products exist. Skipping seed.`)
+    if (ewhCount > 0 && ebooksCount > 0 && ebooksMaintCount > 0 && ecommMaintCount > 0) {
+      console.log(`Database already has data. Ecom Warehouse (${ewhCount}), Ecom Books (${ebooksCount}), Ebooks Maintenance (${ebooksMaintCount}), and Ecomm Maintenance (${ecommMaintCount}) products exist. Skipping seed.`)
+      await ensureMissingExtraStores(prisma)
       return
     }
 
@@ -111,6 +296,17 @@ async function main() {
       await seedEcomBooksProducts(prisma)
     }
 
+    if (ebooksMaintCount === 0) {
+      console.log('Database has data but no Ebooks Maintenance products. Seeding Ebooks Maintenance...')
+      await seedEbooksMaintenanceProducts(prisma)
+    }
+
+    if (ecommMaintCount === 0) {
+      console.log('Database has data but no Ecomm Maintenance products. Seeding Ecomm Maintenance...')
+      await seedEcommMaintenanceProducts(prisma)
+    }
+
+    await ensureMissingExtraStores(prisma)
     return
   }
 
@@ -272,7 +468,7 @@ async function main() {
   await prisma.product.create({
     data: {
       name: 'Short-Sleeve GW Polo Shirt',
-      category: 'Staff Uniforms',
+      category: 'Staff Apparel',
       unitPriceCents: 1600,
       maxQuantity: 10,
       isActive: true,
@@ -289,7 +485,7 @@ async function main() {
   await prisma.product.create({
     data: {
       name: 'Long-Sleeve GW Polo Shirt',
-      category: 'Staff Uniforms',
+      category: 'Staff Apparel',
       unitPriceCents: 2100,
       maxQuantity: 10,
       isActive: true,
@@ -306,7 +502,7 @@ async function main() {
   await prisma.product.create({
     data: {
       name: 'Short-Sleeve GW Dress Shirt',
-      category: 'Staff Uniforms',
+      category: 'Staff Apparel',
       unitPriceCents: 2100,
       maxQuantity: 10,
       isActive: true,
@@ -323,7 +519,7 @@ async function main() {
   await prisma.product.create({
     data: {
       name: 'Long-Sleeve GW Dress Shirt',
-      category: 'Staff Uniforms',
+      category: 'Staff Apparel',
       unitPriceCents: 2200,
       maxQuantity: 10,
       isActive: true,
@@ -341,7 +537,7 @@ async function main() {
   await prisma.product.create({
     data: {
       name: 'GW Fleece Zip Up',
-      category: 'Staff Uniforms',
+      category: 'Staff Apparel',
       unitPriceCents: 2500,
       maxQuantity: 10,
       isActive: true,
@@ -412,61 +608,66 @@ async function main() {
 
   console.log('Created ADC Maintenance products')
 
-  // Seed Housatonic Maintenance Products (50 items)
+  // Seed Store Maintenance Order products
   await prisma.product.createMany({
     data: [
-      { name: 'Toilet Paper (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 5, isActive: true },
-      { name: 'Toilet Paper Dispensers (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 1, isActive: true },
-      { name: 'Toilet Brush (HM)', category: 'Housatonic Maintenance', unitPriceCents: 800, maxQuantity: 1, isActive: true },
-      { name: 'Urinal Block with Screen (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2500, maxQuantity: 1, isActive: true },
-      { name: 'Paper Towels (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3000, maxQuantity: 4, isActive: true },
-      { name: 'Paper Towel Dispensers (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1800, maxQuantity: 1, isActive: true },
-      { name: 'Antibacterial Hand Foam Soap (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 1, isActive: true },
-      { name: 'Soap Dispensers (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1200, maxQuantity: 1, isActive: true },
-      { name: 'Disinfectant Foam Cleaner (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 4000, maxQuantity: 2, isActive: true },
-      { name: 'Dust Mop Treatment (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3000, maxQuantity: 1, isActive: true },
-      { name: 'Lysol Disinfectant Spray (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 4500, maxQuantity: 1, isActive: true },
-      { name: 'Time Mist Refills - Cherry (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 1, isActive: true },
-      { name: 'Time Mist Refills - Citrus (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 1, isActive: true },
-      { name: 'Time Mist Refills - Clean Linen (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 1, isActive: true },
-      { name: 'Time Mist Dispensers (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 1, isActive: true },
-      { name: 'Goo Off (can) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1200, maxQuantity: 1, isActive: true },
-      { name: 'Spray Bottle & Trigger (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 800, maxQuantity: 4, isActive: true },
-      { name: 'Glass Cleaner (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2500, maxQuantity: 1, isActive: true },
-      { name: 'Pine Kleen (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3000, maxQuantity: 1, isActive: true },
-      { name: 'Clear Trash Bags – Large (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2500, maxQuantity: 2, isActive: true },
-      { name: 'Clear Trash Bags – Small (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 2, isActive: true },
-      { name: 'Bleach (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 1, isActive: true },
-      { name: 'Quat 64 Concentrate Disinfectant (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 5000, maxQuantity: 1, isActive: true },
-      { name: 'Twine (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1000, maxQuantity: 1, isActive: true },
-      { name: 'Masking Tape (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1200, maxQuantity: 2, isActive: true },
-      { name: 'Sanitary Napkin Bags (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1800, maxQuantity: 1, isActive: true },
-      { name: 'Cotton Mop Heads 32oz (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 4000, maxQuantity: 1, isActive: true },
-      { name: 'Dust Mop Head (dry) 36" (each) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 12, isActive: true },
-      { name: 'OneShot Floor Cleaner (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 1, isActive: true },
-      { name: 'Backbraces (each) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2500, maxQuantity: 6, isActive: true },
-      { name: 'Push Broom 24" - refill (single) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1200, maxQuantity: 0, isActive: true },
-      { name: 'Floor Mop (complete) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2500, maxQuantity: 1, isActive: true },
-      { name: 'Heavy Duty Street Broom (complete) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3500, maxQuantity: 2, isActive: true },
-      { name: 'Long Handle Scraper (each) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 3, isActive: true },
-      { name: 'Dust Mop (complete set) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 3000, maxQuantity: 3, isActive: true },
-      { name: 'Dustpan & Brush (normal length broom) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 4, isActive: true },
-      { name: 'Mop Bucket (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 2, isActive: true },
-      { name: 'Plastic Cups (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 1, isActive: true },
-      { name: 'Paper Plates (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 2000, maxQuantity: 1, isActive: true },
-      { name: 'Spoons - plastic (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1000, maxQuantity: 1, isActive: true },
-      { name: 'Forks - plastic (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1000, maxQuantity: 1, isActive: true },
-      { name: 'Knives - plastic (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1000, maxQuantity: 1, isActive: true },
-      { name: 'Blades for Long Handle Scraper (pack) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 1500, maxQuantity: 4, isActive: true },
-      { name: 'Hand Sanitizer Foam Ref. (case) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 4000, maxQuantity: 1, isActive: true },
-      { name: 'Hand Sanitizer – single pump bottle (HM)', category: 'Housatonic Maintenance', unitPriceCents: 800, maxQuantity: 4, isActive: true },
-      { name: 'Newsprint (bundle) (HM)', category: 'Housatonic Maintenance', unitPriceCents: 500, maxQuantity: 6, isActive: true },
+      { name: 'Toilet Paper (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 5, isActive: true },
+      { name: 'Toilet Paper Dispensers (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Toilet Brush (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 800, maxQuantity: 1, isActive: true },
+      { name: 'Urinal Block with Screen (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Paper Towels (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3000, maxQuantity: 4, isActive: true },
+      { name: 'Paper Towel Dispensers (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1800, maxQuantity: 1, isActive: true },
+      { name: 'Antibacterial Hand Foam Soap (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Soap Dispensers (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Disinfectant Foam Cleaner (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 4000, maxQuantity: 2, isActive: true },
+      { name: 'Dust Mop Treatment (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3000, maxQuantity: 1, isActive: true },
+      { name: 'Lysol Disinfectant Spray (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 4500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Cherry (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Citrus (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Refills - Clean Linen (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Time Mist Dispensers (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Goo Off (can) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1200, maxQuantity: 1, isActive: true },
+      { name: 'Spray Bottle & Trigger (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 800, maxQuantity: 4, isActive: true },
+      { name: 'Glass Cleaner (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Pine Kleen (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3000, maxQuantity: 1, isActive: true },
+      { name: 'Clear Trash Bags – Large (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2500, maxQuantity: 2, isActive: true },
+      { name: 'Clear Trash Bags – Small (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 2, isActive: true },
+      { name: 'Bleach (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Quat 64 Concentrate Disinfectant (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 5000, maxQuantity: 1, isActive: true },
+      { name: 'Twine (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Masking Tape (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1200, maxQuantity: 2, isActive: true },
+      { name: 'Sanitary Napkin Bags (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1800, maxQuantity: 1, isActive: true },
+      { name: 'Cotton Mop Heads 32oz (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 4000, maxQuantity: 1, isActive: true },
+      { name: 'Dust Mop Head (dry) 36" (each) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 12, isActive: true },
+      { name: 'OneShot Floor Cleaner (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 1, isActive: true },
+      { name: 'Backbraces (each) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2500, maxQuantity: 6, isActive: true },
+      { name: 'Push Broom 24" - refill (single) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1200, maxQuantity: 0, isActive: true },
+      { name: 'Floor Mop (complete) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2500, maxQuantity: 1, isActive: true },
+      { name: 'Heavy Duty Street Broom (complete) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3500, maxQuantity: 2, isActive: true },
+      { name: 'Long Handle Scraper (each) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 3, isActive: true },
+      { name: 'Dust Mop (complete set) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 3000, maxQuantity: 3, isActive: true },
+      { name: 'Dustpan & Brush (normal length broom) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 4, isActive: true },
+      { name: 'Mop Bucket (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 2, isActive: true },
+      { name: 'Plastic Cups (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 1, isActive: true },
+      { name: 'Paper Plates (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 2000, maxQuantity: 1, isActive: true },
+      { name: 'Spoons - plastic (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Forks - plastic (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Knives - plastic (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1000, maxQuantity: 1, isActive: true },
+      { name: 'Blades for Long Handle Scraper (pack) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 1500, maxQuantity: 4, isActive: true },
+      { name: 'Hand Sanitizer Foam Ref. (case) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 4000, maxQuantity: 1, isActive: true },
+      { name: 'Hand Sanitizer – single pump bottle (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 800, maxQuantity: 4, isActive: true },
+      { name: 'Newsprint (bundle) (SMO)', category: STORE_MAINTENANCE_ORDER_CATEGORY, unitPriceCents: 500, maxQuantity: 6, isActive: true },
     ],
   })
 
-  console.log('Created Housatonic Maintenance products')
+  console.log('Created Store Maintenance Order products')
   await seedEcomWarehouseProducts(prisma)
   await seedEcomBooksProducts(prisma)
+  await seedEbooksMaintenanceProducts(prisma)
+  await seedEcommMaintenanceProducts(prisma)
+
+  await migrateStoreSortOrder(prisma)
+  await ensureMissingExtraStores(prisma)
 
   console.log('Seeding completed!')
 }

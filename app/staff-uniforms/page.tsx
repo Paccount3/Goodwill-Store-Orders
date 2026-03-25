@@ -1,7 +1,17 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  ConfirmOrderModal,
+  OrderSubmitErrorModal,
+  OrderSuccessModal,
+  OrderLoadingModal,
+} from '@/app/components/StoreOrderFlowModals'
+import {
+  isSuccessfulOrderResponse,
+  orderSubmitErrorUserMessage,
+} from '@/lib/order-flow'
 
 interface Store {
   id: number
@@ -54,6 +64,8 @@ export default function StaffUniformsPage() {
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [orderSubmitError, setOrderSubmitError] = useState('')
 
   const [formData, setFormData] = useState({
     storeId: '',
@@ -168,6 +180,10 @@ export default function StaffUniformsPage() {
     return orderItems.reduce((sum, item) => sum + item.lineTotalCents, 0)
   }
 
+  const formatCurrency = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -219,24 +235,36 @@ export default function StaffUniformsPage() {
         }),
       })
 
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create order')
+      let payload: unknown
+      try {
+        payload = await res.json()
+      } catch {
+        throw new Error(`Invalid response from server (${res.status})`)
       }
 
-      const order = await res.json()
-      setCreatedOrderId(order.id)
-      setSubmitting(false)
+      if (!res.ok) {
+        const errObj = payload as { error?: string; details?: string }
+        throw new Error(errObj.error || errObj.details || `Request failed (${res.status})`)
+      }
 
-      // Show loading animation for 1 second before showing success
+      if (!isSuccessfulOrderResponse(payload)) {
+        throw new Error('Order was not saved correctly. Please try again.')
+      }
+
+      setCreatedOrderId(payload.id)
+      setSubmitting(false)
       setShowLoadingAnimation(true)
       setTimeout(() => {
         setShowLoadingAnimation(false)
         setShowSuccessModal(true)
       }, 1000)
-    } catch (error: any) {
-      alert(error.message || 'Failed to create order')
+    } catch (error: unknown) {
+      const technical =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : String(error)
+      setOrderSubmitError(orderSubmitErrorUserMessage(technical))
+      setShowErrorModal(true)
       setSubmitting(false)
+      setShowLoadingAnimation(false)
     }
   }
 
@@ -256,22 +284,23 @@ export default function StaffUniformsPage() {
     setOrderItems([])
     setShowSuccessModal(false)
     setCreatedOrderId(null)
+    setShowErrorModal(false)
+    setOrderSubmitError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleGoToOrdersHub = () => {
-    router.push('/orders')
   }
 
   const handlePrintOrder = () => {
     if (createdOrderId) {
-      router.push(`/orders/${createdOrderId}/invoice`)
+      window.open(`${window.location.origin}/orders/${createdOrderId}/invoice`, '_blank', 'noopener,noreferrer')
     }
   }
 
-  const formatCurrency = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`
-  }
+  const orderSuccessMeta = useMemo(() => {
+    if (!createdOrderId) return null
+    const st = stores.find((s) => s.id === Number(formData.storeId))
+    const storeDisplay = st ? `${st.storeNumber} - ${st.name}` : 'Unknown store'
+    return { storeDisplay, orderTypeLabel: 'Staff Apparel' as const }
+  }, [createdOrderId, stores, formData.storeId])
 
   const uniformsByCategory = Array.isArray(uniforms) ? uniforms.reduce((acc, uniform) => {
     if (!acc[uniform.category]) {
@@ -297,15 +326,15 @@ export default function StaffUniformsPage() {
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <h1 className="text-2xl font-bold text-[#0066CC]">
-              Staff Uniforms Order Form
+              Staff Apparel
             </h1>
             <a
-              href="/GW-Apparel-Form.pdf"
+              href="/Payroll-Deduction-Form.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center px-4 py-2 bg-[#0066CC] text-white text-sm font-bold rounded-md hover:bg-[#0052A3] transition-colors shadow-md"
             >
-              Print Deductions PDF
+              Print Payroll Deduction PDF
             </a>
           </div>
 
@@ -365,11 +394,17 @@ export default function StaffUniformsPage() {
               </div>
             </div>
 
+            <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-gray-900">
+              <p className="font-semibold">
+                The payroll deduction form (found above on the right) must be filled out and emailed to Michael Segura (msegura@gwct.org) for your order to be packed and shipped. A payroll deduction form does not need to be filled out for the retail store management team annual free orders.
+              </p>
+            </div>
+
             <div className="border-t pt-6">
-              <h2 className="text-xl font-bold text-[#0066CC] mb-4">Available Uniforms</h2>
+              <h2 className="text-xl font-bold text-[#0066CC] mb-4">Available Apparel</h2>
               {Object.keys(uniformsByCategory).length === 0 ? (
                 <div className="text-center py-8 text-gray-600">
-                  <p>No uniforms available. Please check back later or contact support.</p>
+                  <p>No apparel available. Please check back later or contact support.</p>
                   <p className="text-sm mt-2">If you just seeded the database, please refresh the page.</p>
                 </div>
               ) : (
@@ -523,7 +558,7 @@ export default function StaffUniformsPage() {
             <div className="flex justify-end gap-4 pt-4 border-t">
               <button
                 type="button"
-                onClick={() => router.push('/orders')}
+                onClick={() => router.push('/')}
                 className="px-6 py-2 border-2 border-gray-300 rounded-md text-gray-900 font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
               >
                 Cancel
@@ -540,142 +575,39 @@ export default function StaffUniformsPage() {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-4">
-                Confirm Order Submission
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Are you ready to submit this order? An email will be sent to our fulfillment team.
-              </p>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
-                  <span className="text-xs text-gray-500">Temporary Password</span> BIGBLUE
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setPasswordError('')
-                  }}
-                  placeholder="Enter password"
-                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleConfirmSubmit()
-                    }
-                  }}
-                />
-                {passwordError && (
-                  <p className="text-red-600 text-sm mt-1 text-left">{passwordError}</p>
-                )}
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelConfirm}
-                  className="flex-1 bg-white border-2 border-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmSubmit}
-                  disabled={submitting}
-                  className="flex-1 bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Confirm & Submit'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmOrderModal
+        open={showConfirmModal}
+        password={password}
+        passwordError={passwordError}
+        submitting={submitting}
+        onPasswordChange={(v) => {
+          setPassword(v)
+          setPasswordError('')
+        }}
+        onCancel={handleCancelConfirm}
+        onConfirm={handleConfirmSubmit}
+      />
 
-      {/* Loading Animation Modal */}
-      {showLoadingAnimation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-8">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-20 w-20 mb-4">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#0066CC] border-t-transparent"></div>
-              </div>
-              <p className="text-lg font-semibold text-gray-900">
-                Processing your order...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderSubmitErrorModal
+        open={showErrorModal}
+        message={orderSubmitError}
+        onClose={() => {
+          setShowErrorModal(false)
+          setOrderSubmitError('')
+        }}
+      />
 
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <svg
-                  className="h-8 w-8 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-[#0066CC] mb-2">
-                Order Successful!
-              </h2>
-              <p className="text-gray-700 mb-6">
-                Your uniform order has been submitted successfully.
-                {createdOrderId && (
-                  <span className="block mt-1 text-sm text-gray-600">
-                    Order #{createdOrderId}
-                  </span>
-                )}
-                <span className="block mt-3 text-sm text-gray-600">
-                  Please reach out to our fulfillment team for any issues or delays.
-                </span>
-              </p>
+      <OrderLoadingModal open={showLoadingAnimation} />
 
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-900 mb-4">
-                  What would you like to do next?
-                </p>
-
-                <button
-                  onClick={handleOrderAgain}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Order Again
-                </button>
-
-                <button
-                  onClick={handleGoToOrdersHub}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Go to Orders Hub
-                </button>
-
-                <button
-                  onClick={handlePrintOrder}
-                  className="w-full bg-white border-2 border-[#0066CC] text-[#0066CC] font-bold py-3 px-4 rounded-lg hover:bg-[#0066CC] hover:text-white transition shadow-md"
-                >
-                  Print Order
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {showSuccessModal && createdOrderId && orderSuccessMeta && (
+        <OrderSuccessModal
+          open
+          orderId={createdOrderId}
+          storeDisplay={orderSuccessMeta.storeDisplay}
+          orderTypeLabel={orderSuccessMeta.orderTypeLabel}
+          onOrderAgain={handleOrderAgain}
+          onPrintCopy={handlePrintOrder}
+        />
       )}
     </div>
   )

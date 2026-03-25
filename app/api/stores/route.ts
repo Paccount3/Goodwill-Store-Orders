@@ -1,37 +1,61 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // Ensure additional staff-apparel locations exist
-    const extraLocations = [
-      { storeNumber: '21', name: 'Bridgeport Headquarters' },
-      { storeNumber: '22', name: 'Cheshire CR' },
-      { storeNumber: '23', name: 'Greenwich ADC' },
-      { storeNumber: '24', name: 'Hartford Campus' },
-      { storeNumber: '25', name: 'Manchester CR' },
-      { storeNumber: '26', name: 'Ridgefield ADC' },
-      { storeNumber: '27', name: 'Riverside ADC' },
-    ]
-
-    await Promise.all(
-      extraLocations.map((loc) =>
-        prisma.store.upsert({
-          where: { storeNumber: loc.storeNumber },
-          update: { name: loc.name },
-          create: loc,
-        })
-      )
-    )
-
     const stores = await prisma.store.findMany({
-      orderBy: {
-        storeNumber: 'asc',
-      },
+      orderBy: [{ sortOrder: 'asc' }, { storeNumber: 'asc' }],
     })
     return NextResponse.json(stores)
   } catch (error) {
     console.error('Error fetching stores:', error)
     return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { storeNumber, name } = body
+
+    if (!storeNumber || typeof storeNumber !== 'string' || !storeNumber.trim()) {
+      return NextResponse.json(
+        { error: 'Store number is required' },
+        { status: 400 }
+      )
+    }
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json({ error: 'Store name is required' }, { status: 400 })
+    }
+
+    const trimmedNumber = storeNumber.trim()
+    const trimmedName = name.trim()
+
+    const existing = await prisma.store.findUnique({
+      where: { storeNumber: trimmedNumber },
+    })
+    if (existing) {
+      return NextResponse.json(
+        { error: `A store with number "${trimmedNumber}" already exists` },
+        { status: 409 }
+      )
+    }
+
+    const maxSort = await prisma.store.aggregate({
+      _max: { sortOrder: true },
+    })
+    const nextSort = (maxSort._max.sortOrder ?? -1) + 1
+
+    const store = await prisma.store.create({
+      data: {
+        storeNumber: trimmedNumber,
+        name: trimmedName,
+        sortOrder: nextSort,
+      },
+    })
+    return NextResponse.json(store)
+  } catch (error) {
+    console.error('Error creating store:', error)
+    return NextResponse.json({ error: 'Failed to create store' }, { status: 500 })
   }
 }

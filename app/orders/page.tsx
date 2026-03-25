@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Store {
@@ -45,6 +45,14 @@ interface Stats {
 
 export default function OrdersHubPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Admin password must be entered on every page-open/refresh.
+  // We verify via `/api/admin/status` and then immediately clear the cookie
+  // so the next refresh forces another password prompt.
+  const [adminGateLoading, setAdminGateLoading] = useState(true)
+
   const [orders, setOrders] = useState<Order[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -65,14 +73,58 @@ export default function OrdersHubPage() {
   })
 
   useEffect(() => {
-    fetchStores()
-    fetchProducts()
-  }, [])
+    let cancelled = false
+
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/admin/status', { cache: 'no-store' })
+        const data = await res.json()
+
+        if (cancelled) return
+
+        if (!data?.authed) {
+          const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+          const redirectTo = `${pathname}${searchString}`
+          router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+          return
+        }
+
+        // Verified: allow this page load, then consume the auth token.
+        setAdminGateLoading(false)
+        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
+      } catch {
+        if (cancelled) return
+        const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+        const redirectTo = `${pathname}${searchString}`
+        router.replace(`/admin-lock?redirectTo=${encodeURIComponent(redirectTo)}`)
+      }
+    }
+
+    checkAdmin()
+    return () => {
+      cancelled = true
+    }
+  }, [pathname, router, searchParams])
 
   useEffect(() => {
-    fetchOrders()
-    fetchStats()
-  }, [filters])
+    if (!adminGateLoading) {
+      fetchStores()
+      fetchProducts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminGateLoading])
+
+  useEffect(() => {
+    if (!adminGateLoading) {
+      fetchOrders()
+      fetchStats()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, adminGateLoading])
+
+  if (adminGateLoading) {
+    return null
+  }
 
   const fetchStores = async () => {
     try {
@@ -127,11 +179,15 @@ export default function OrdersHubPage() {
       if (filters.orderType) {
         // Map display values to database values for stats API
         const orderTypeMap: Record<string, string> = {
-          'NSSO': 'NSSO',
-          'SU': 'SU',
+          NSSO: 'NSSO',
+          SU: 'SU',
           'ADC S': 'ADC_S',
           'ADC M': 'ADC_M',
-          'HM': 'HM',
+          HM: 'HM',
+          EWH: 'EWH',
+          EEB: 'EEB',
+          EBM: 'EBM',
+          ECM: 'ECM',
         }
         params.append('orderType', orderTypeMap[filters.orderType] || filters.orderType)
       }
@@ -165,18 +221,26 @@ export default function OrdersHubPage() {
   }
 
   const getOrderTypeAcronym = (orderType: string | null | undefined): string => {
-    if (!orderType) return 'NSSO' // Default for old orders without type
+    if (!orderType) return 'SSO' // Default for old orders without type (stored as NSSO)
     switch (orderType) {
       case 'NSSO':
-        return 'NSSO'
+        return 'SSO'
       case 'SU':
-        return 'SU'
+        return 'SA'
       case 'ADC_S':
         return 'ADC S'
       case 'ADC_M':
         return 'ADC M'
       case 'HM':
         return 'Store Maintenance'
+      case 'EWH':
+        return 'Ecomm Supply'
+      case 'EEB':
+        return 'EBooks Supply'
+      case 'EBM':
+        return 'Ebooks Maintenance'
+      case 'ECM':
+        return 'Ecomm Maintenance'
       default:
         return orderType
     }
@@ -408,11 +472,15 @@ export default function OrdersHubPage() {
               className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
             >
               <option value="" className="text-gray-600">All Types</option>
-              <option value="NSSO" className="text-gray-900">NSSO</option>
-              <option value="SU" className="text-gray-900">SU</option>
+              <option value="NSSO" className="text-gray-900">SSO</option>
+              <option value="SU" className="text-gray-900">SA</option>
               <option value="ADC S" className="text-gray-900">ADC S</option>
               <option value="ADC M" className="text-gray-900">ADC M</option>
               <option value="HM" className="text-gray-900">Store Maintenance</option>
+              <option value="EWH" className="text-gray-900">Ecomm Supply</option>
+              <option value="EEB" className="text-gray-900">EBooks Supply</option>
+              <option value="EBM" className="text-gray-900">Ebooks Maintenance</option>
+              <option value="ECM" className="text-gray-900">Ecomm Maintenance</option>
             </select>
           </div>
           <div className="flex items-end">

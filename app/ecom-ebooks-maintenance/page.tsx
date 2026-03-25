@@ -38,6 +38,30 @@ interface ProductOrder {
   order: number
 }
 
+// Display order matching Ebooks Maintenance form
+const EBOOKS_MAINTENANCE_DISPLAY_ORDER: Record<string, number> = {
+  'Paper Towels (case) (Ebooks Maintenance)': 1,
+  'Time Mist Refills - Clean Linen (case) (Ebooks Maintenance)': 2,
+  'Clear Trash Bags - Small (case) (Ebooks Maintenance)': 3,
+  'Fantastik Multi-Surface Disinfectant with triggers (Ebooks Maintenance)': 4,
+  'Masking Tape (case) (Ebooks Maintenance)': 5,
+  'Dust Mop Head (dry) 36" (each) (Ebooks Maintenance)': 6,
+  'Backbraces (each) (Ebooks Maintenance)': 7,
+  'Push Broom 24" - refill (single) - order as needed (Ebooks Maintenance)': 8,
+  'Heavy Duty Street Broom (complete) (Ebooks Maintenance)': 9,
+  'Dust Mop (complete set) (Ebooks Maintenance)': 10,
+  'Dustpan & Brush (normal length broom) (Ebooks Maintenance)': 11,
+  'Paper Plates (case) (Ebooks Maintenance)': 12,
+  'Spoons - plastic (Ebooks Maintenance)': 13,
+  'Forks - plastic (Ebooks Maintenance)': 14,
+  'Knives - plastic (Ebooks Maintenance)': 15,
+  'Hand Sanitizer - single pump bottle (Ebooks Maintenance)': 16,
+  'Nitrile Gloves - Small (case of 1000) (Ebooks Maintenance)': 17,
+  'Nitrile Gloves - Medium (case of 1000) (Ebooks Maintenance)': 18,
+  'Nitrile Gloves - Large (case of 1000) (Ebooks Maintenance)': 19,
+  'Nitrile Gloves - XL (case of 1000) (Ebooks Maintenance)': 20,
+}
+
 // Helper function to get today's date in local timezone (YYYY-MM-DD format)
 const getTodayLocalDate = () => {
   const today = new Date()
@@ -47,7 +71,7 @@ const getTodayLocalDate = () => {
   return `${year}-${month}-${day}`
 }
 
-export default function ADCMaintenancePage() {
+export default function EcomEbooksMaintenancePage() {
   const router = useRouter()
   const [stores, setStores] = useState<Store[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -77,16 +101,6 @@ export default function ADCMaintenancePage() {
   }, [])
 
   useEffect(() => {
-    // Set default storeId to first store when stores are loaded
-    if (stores.length > 0 && !formData.storeId) {
-      setFormData(prev => ({ ...prev, storeId: stores[0].id.toString() }))
-    }
-    // Intentionally only when stores load; adding formData.storeId would overwrite user selection
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stores])
-
-  useEffect(() => {
-    // Initialize productOrders when products are loaded
     if (Array.isArray(products) && products.length > 0) {
       const initial: Record<number, ProductOrder> = {}
       products.forEach((product) => {
@@ -104,6 +118,12 @@ export default function ADCMaintenancePage() {
     }
   }, [products])
 
+  useEffect(() => {
+    if (stores.length > 0 && !formData.storeId) {
+      setFormData((prev) => ({ ...prev, storeId: stores[0].id.toString() }))
+    }
+  }, [stores, formData.storeId])
+
   const fetchStores = async () => {
     try {
       const res = await fetch('/api/stores')
@@ -116,20 +136,14 @@ export default function ADCMaintenancePage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&category=ADC Maintenance')
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error('API Error Response:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to fetch products')
-      }
+      // Products will be provided later; placeholder category for now
+      const res = await fetch('/api/products?activeOnly=true&category=Ebooks Maintenance')
       const data = await res.json()
-      // Ensure data is an array
       setProducts(Array.isArray(data) ? data : [])
       setLoading(false)
     } catch (error: any) {
       console.error('Error fetching products:', error)
-      console.error('Error details:', error.message)
-      setProducts([]) // Set to empty array on error
+      setProducts([])
       setLoading(false)
     }
   }
@@ -140,9 +154,8 @@ export default function ADCMaintenancePage() {
       if (!existing) return prev
 
       const nextCurrent =
-        value === null
-          ? null
-          : Math.min(Math.max(0, value), existing.maxQuantity)
+        value === null ? null : Math.min(Math.max(0, value), existing.maxQuantity)
+
       const autoOrder =
         nextCurrent === null ? 0 : Math.max(0, existing.maxQuantity - nextCurrent)
 
@@ -167,28 +180,19 @@ export default function ADCMaintenancePage() {
       })
   }
 
-  const getSubtotalCents = () => {
-    return getOrderedItems().reduce((sum, item) => {
-      return sum + item.unitPriceCents * item.order
-    }, 0)
+  const calculateSubtotal = () => {
+    return getOrderedItems().reduce((sum, item) => sum + item.unitPriceCents * item.order, 0)
   }
 
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.managerName) {
-      alert('Please fill in all required fields')
-      return
-    }
-
-    // Use first store as default if storeId is not set
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
+    if (!formData.managerName.trim()) {
+      alert('Please enter the manager name')
       return
     }
 
@@ -198,14 +202,12 @@ export default function ADCMaintenancePage() {
       return
     }
 
-    // Show confirmation modal instead of submitting directly
     setShowConfirmModal(true)
     setPassword('')
     setPasswordError('')
   }
 
   const handleConfirmSubmit = async () => {
-    // Validate password
     if (password !== 'BIGBLUE') {
       setPasswordError('Incorrect password')
       return
@@ -215,7 +217,6 @@ export default function ADCMaintenancePage() {
     setShowConfirmModal(false)
     setSubmitting(true)
 
-    // Use first store as default if storeId is not set
     const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
     if (!storeIdToUse) {
       alert('No stores available')
@@ -231,10 +232,10 @@ export default function ADCMaintenancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: storeIdToUse,
-          managerName: formData.managerName,
+          managerName: formData.managerName.trim(),
           orderDate: formData.orderDate,
           notes: formData.notes,
-          orderType: 'ADC_M',
+          orderType: 'EBM',
           lineItems: orderedItems.map((item) => ({
             productId: item.productId,
             currentQuantity: item.current,
@@ -283,7 +284,6 @@ export default function ADCMaintenancePage() {
   }
 
   const handleOrderAgain = () => {
-    // Reset form (keep default storeId)
     const defaultStoreId = stores.length > 0 ? stores[0].id.toString() : ''
     setFormData({
       storeId: defaultStoreId,
@@ -292,7 +292,6 @@ export default function ADCMaintenancePage() {
       notes: '',
     })
 
-    // Reset all product orders
     const reset: Record<number, ProductOrder> = {}
     if (Array.isArray(products)) {
       products.forEach((product) => {
@@ -324,16 +323,24 @@ export default function ADCMaintenancePage() {
 
   const orderSuccessMeta = useMemo(() => {
     if (!createdOrderId) return null
-    return { storeDisplay: '', orderTypeLabel: 'ADC Maintenance Order' as const }
+    return { storeDisplay: '', orderTypeLabel: 'Ebooks Maintenance Order' as const }
   }, [createdOrderId])
 
-  const productsByCategory = Array.isArray(products) ? products.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = []
-    }
-    acc[product.category].push(product)
-    return acc
-  }, {} as Record<string, Product[]>) : {}
+  const sortedProducts = Array.isArray(products)
+    ? [...products].sort((a, b) => {
+        const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
+        const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
+        return orderA - orderB
+      })
+    : []
+
+  const productsByCategory = sortedProducts.length > 0
+    ? sortedProducts.reduce((acc, product) => {
+        if (!acc[product.category]) acc[product.category] = []
+        acc[product.category].push(product)
+        return acc
+      }, {} as Record<string, Product[]>)
+    : {}
 
   if (loading) {
     return (
@@ -345,22 +352,19 @@ export default function ADCMaintenancePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">ADC Maintenance Order</h1>
+      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">Ebooks Maintenance Order</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Header Info - Condensed */}
         <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Order Type
-              </label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Order Type</label>
               <select
                 disabled
-                value="ADC_M"
+                value="EBM"
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
               >
-                <option value="ADC_M">ADC M</option>
+                <option value="EBM">Ebooks Maintenance</option>
               </select>
             </div>
             <div>
@@ -372,98 +376,98 @@ export default function ADCMaintenancePage() {
                 required
                 value={formData.managerName}
                 onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                placeholder="Required"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">Date</label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Order Date</label>
               <input
                 type="date"
-                value={getTodayLocalDate()}
-                readOnly
-                disabled
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
+                value={formData.orderDate}
+                onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Notes (Optional)
-              </label>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Notes</label>
               <input
                 type="text"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                placeholder="Add any notes..."
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                placeholder="Optional notes for this order"
               />
             </div>
           </div>
         </div>
 
-        {/* Products Table - Condensed */}
         <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-300 text-xs">
-              <thead className="bg-[#0066CC]">
-                <tr>
-                  <th className="px-2 py-1 text-left text-xs font-bold text-white uppercase border-r border-blue-400">Item</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-20">Current</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-16">Max.</th>
-                  <th className="px-2 py-1 text-center text-xs font-bold text-white uppercase w-20">Order</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(productsByCategory).map(([category, prods]) => (
-                  <React.Fragment key={category}>
-                    <tr className="bg-[#E6F2FF]">
-                      <td colSpan={4} className="px-2 py-1 font-bold text-xs text-[#0066CC]">
-                        {category}
-                      </td>
-                    </tr>
-                    {prods.map((product) => {
-                      const po = productOrders[product.id]
-                      if (!po) return null
-                      return (
-                        <tr key={product.id} className="hover:bg-blue-50">
-                          <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">
-                            {product.name}
-                          </td>
-                          <td className="px-2 py-1 border-r border-gray-200">
-                            <input
-                              type="number"
-                              min="0"
-                              max={product.maxQuantity}
-                              value={po.current ?? ''}
-                              onChange={(e) =>
-                                updateProductOrder(
-                                  product.id,
-                                  'current',
-                                  e.target.value === '' ? null : parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
-                            {product.maxQuantity}
-                          </td>
-                          <td className="px-2 py-1">
-                            <div className="w-full text-center text-xs font-semibold text-gray-900">
-                              {po.order}
-                            </div>
-                          </td>
+          {Object.keys(productsByCategory).length === 0 ? (
+            <div className="text-center py-8 text-gray-600">
+              <p>No Ebooks Maintenance products found.</p>
+              <p className="text-xs mt-1">Products will be added shortly.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(productsByCategory).map(([category, prods]) => (
+                <div key={category} className="border border-gray-200 rounded-lg">
+                  <div className="px-3 py-2 bg-[#E6F2FF] border-b border-gray-200">
+                    <h2 className="text-sm font-bold text-[#0066CC]">{category}</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 border border-gray-300 text-xs">
+                      <thead className="bg-[#0066CC]">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left text-xs font-bold text-white uppercase border-r border-blue-400">Item</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-20">Current</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase border-r border-blue-400 w-16">Max.</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-white uppercase w-20">Order</th>
                         </tr>
-                      )
-                    })}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {prods.map((product) => {
+                          const po = productOrders[product.id]
+                          const current = po?.current ?? ''
+                          const orderQty = po?.order ?? 0
+
+                          return (
+                            <tr key={product.id} className="hover:bg-blue-50">
+                              <td className="px-2 py-1 text-xs font-medium text-gray-900 border-r border-gray-200">{product.name}</td>
+                              <td className="px-2 py-1 border-r border-gray-200">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={product.maxQuantity}
+                                  value={current}
+                                  onChange={(e) =>
+                                    updateProductOrder(
+                                      product.id,
+                                      'current',
+                                      e.target.value === '' ? null : parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full text-center border border-gray-300 rounded px-1 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#0066CC]"
+                                />
+                              </td>
+                              <td className="px-2 py-1 text-center text-xs font-medium text-gray-900 border-r border-gray-200">{product.maxQuantity}</td>
+                              <td className="px-2 py-1">
+                                <div className="w-full text-center text-xs font-semibold text-gray-900">{orderQty > 0 ? orderQty : ''}</div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Estimated Order Summary - Condensed */}
         {getOrderedItems().length > 0 && (
           <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
             <h2 className="text-sm font-bold text-[#0066CC] mb-2">Estimated Order Summary</h2>
@@ -480,27 +484,24 @@ export default function ADCMaintenancePage() {
               ))}
               <div className="border-t pt-1 mt-1 flex justify-between">
                 <span className="font-bold text-[#0066CC]">Subtotal:</span>
-                <span className="font-bold text-[#0066CC]">
-                  {formatCurrency(getSubtotalCents())}
-                </span>
+                <span className="font-bold text-[#0066CC]">{formatCurrency(calculateSubtotal())}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Submit Buttons */}
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="px-4 py-2 border border-gray-300 rounded text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
+            className="px-4 py-2 border-2 border-gray-300 rounded-md text-gray-900 text-sm font-semibold hover:bg-gray-100 hover:border-gray-400 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-2 bg-[#0066CC] text-white font-bold text-sm rounded hover:bg-[#0052A3] disabled:opacity-50 transition-colors shadow"
+            className="px-4 py-2 bg-[#0066CC] text-white text-sm font-bold rounded-md hover:bg-[#0052A3] disabled:opacity-50 transition-colors shadow-md"
           >
             {submitting ? 'Submitting...' : 'Submit Order'}
           </button>
@@ -544,3 +545,4 @@ export default function ADCMaintenancePage() {
     </div>
   )
 }
+

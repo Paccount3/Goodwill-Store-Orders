@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,16 +48,27 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if this is an ADC/Housatonic category (not associated with stores)
-    const isNonStoreCategory = category === 'ADC Supply' || category === 'ADC Maintenance' || category === 'Housatonic Maintenance'
+    // Check if this is a non-store category (not associated with stores)
+    const isNonStoreCategory =
+      category === 'ADC Supply' ||
+      category === 'ADC Maintenance' ||
+      category === STORE_MAINTENANCE_ORDER_CATEGORY ||
+      category === 'Ebooks Maintenance' ||
+      category === 'Ecomm Maintenance'
 
     // Get all stores and products for the table structure
     let stores: Array<{ id: number; storeNumber: string; name: string }> = []
     
     if (isNonStoreCategory) {
-      // For ADC/Housatonic categories, create a single "store" entry with the category name
+      // For ADC / Store Maintenance Order categories, create a single "store" entry with the category name
       const nonStoreDisplayName =
-        category === 'Housatonic Maintenance' ? 'Store Maintenance' : category
+        category === STORE_MAINTENANCE_ORDER_CATEGORY
+          ? 'Store Maintenance Order'
+          : category === 'Ebooks Maintenance'
+          ? 'Ebooks Maintenance'
+          : category === 'Ecomm Maintenance'
+          ? 'Ecomm Maintenance'
+          : category
       stores = [{
         id: -1, // Special ID for non-store categories
         storeNumber: '',
@@ -83,10 +95,19 @@ export async function GET(request: NextRequest) {
 
     // Filter products based on category selection
     const productWhere: any = { isActive: true }
-    if (category === 'Store Supplies') {
-      // Exclude ADC Supply, ADC Maintenance, Housatonic Maintenance, and Staff Uniforms
+    if (category === 'Store Supply') {
+      // Exclude non-store and specialized categories
       productWhere.category = {
-        notIn: ['ADC Supply', 'ADC Maintenance', 'Housatonic Maintenance', 'Staff Uniforms']
+        notIn: [
+          'ADC Supply',
+          'ADC Maintenance',
+          STORE_MAINTENANCE_ORDER_CATEGORY,
+          'Staff Apparel',
+          'Ecom Warehouse',
+          'Ecom Books',
+          'Ebooks Maintenance',
+          'Ecomm Maintenance',
+        ]
       }
     } else if (category) {
       // Show only the selected category
