@@ -176,7 +176,7 @@ export default function OrdersHubPage() {
       case 'ADC_M':
         return 'ADC M'
       case 'HM':
-        return 'HM'
+        return 'Store Maintenance'
       default:
         return orderType
     }
@@ -412,7 +412,7 @@ export default function OrdersHubPage() {
               <option value="SU" className="text-gray-900">SU</option>
               <option value="ADC S" className="text-gray-900">ADC S</option>
               <option value="ADC M" className="text-gray-900">ADC M</option>
-              <option value="HM" className="text-gray-900">HM</option>
+              <option value="HM" className="text-gray-900">Store Maintenance</option>
             </select>
           </div>
           <div className="flex items-end">

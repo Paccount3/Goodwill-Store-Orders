@@ -55,10 +55,12 @@ export async function GET(request: NextRequest) {
     
     if (isNonStoreCategory) {
       // For ADC/Housatonic categories, create a single "store" entry with the category name
+      const nonStoreDisplayName =
+        category === 'Housatonic Maintenance' ? 'Store Maintenance' : category
       stores = [{
         id: -1, // Special ID for non-store categories
         storeNumber: '',
-        name: category,
+        name: nonStoreDisplayName,
       }]
     } else {
       // For regular categories, get actual stores

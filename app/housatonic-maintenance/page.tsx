@@ -317,7 +317,7 @@ export default function HousatonicMaintenancePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">Housatonic Maintenance Order Form</h1>
+      <h1 className="text-2xl font-bold text-[#0066CC] mb-4">Store Maintenance Order</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Header Info - Condensed */}
@@ -332,7 +332,7 @@ export default function HousatonicMaintenancePage() {
                 value="HM"
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
               >
-                <option value="HM">HM</option>
+                <option value="HM">Store Maintenance</option>
               </select>
             </div>
             <div>
@@ -575,7 +575,7 @@ export default function HousatonicMaintenancePage() {
                 Order Successful!
               </h2>
               <p className="text-gray-700 mb-6">
-                Your Housatonic Maintenance order has been submitted successfully.
+                Your Store Maintenance order has been submitted successfully.
                 {createdOrderId && (
                   <span className="block mt-1 text-sm text-gray-600">
                     Order #{createdOrderId}

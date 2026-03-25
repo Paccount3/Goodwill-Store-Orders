@@ -89,9 +89,11 @@ export async function GET(request: NextRequest) {
     if (isNonStoreCategory) {
       // For non-store categories, aggregate all into a single entry
       const totalSpend = filteredOrders.reduce((sum, order) => sum + order.subtotalCents, 0)
+      const nonStoreDisplayName =
+        category === 'Housatonic Maintenance' ? 'Store Maintenance' : (category || 'Unknown')
       storeSpend[-1] = {
         storeId: -1,
-        storeName: category || 'Unknown',
+        storeName: nonStoreDisplayName,
         spendCents: totalSpend,
         orderCount: filteredOrders.length,
       }

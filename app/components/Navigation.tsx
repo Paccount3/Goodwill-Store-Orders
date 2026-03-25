@@ -18,16 +18,32 @@ export default function Navigation() {
               <h1 className="text-xl font-bold text-white">Goodwill Store Orders</h1>
             </div>
             <div className="hidden sm:flex sm:ml-8 sm:space-x-6 items-center">
-              <Link
-                href="/new-order"
-                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
-                  isActive('/new-order')
-                    ? 'border-white text-white'
-                    : 'border-transparent text-blue-100 hover:text-white hover:border-blue-200'
-                }`}
-              >
-                Store Supplies
-              </Link>
+              <div className="relative group">
+                <button
+                  className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
+                    isActive('/new-order') || isActive('/housatonic-maintenance')
+                      ? 'border-white text-white'
+                      : 'border-transparent text-blue-100 hover:text-white hover:border-blue-200'
+                  }`}
+                >
+                  Stores
+                  <span className="ml-1 text-xs">▼</span>
+                </button>
+                <div className="absolute left-0 top-full mt-0 w-64 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-20">
+                  <Link
+                    href="/new-order"
+                    className="block px-4 py-2 text-sm hover:bg-blue-50"
+                  >
+                    Store Supply Order
+                  </Link>
+                  <Link
+                    href="/housatonic-maintenance"
+                    className="block px-4 py-2 text-sm hover:bg-blue-50"
+                  >
+                    Store Maintenance Order
+                  </Link>
+                </div>
+              </div>
               <Link
                 href="/staff-uniforms"
                 className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
@@ -64,16 +80,6 @@ export default function Navigation() {
                   </Link>
                 </div>
               </div>
-              <Link
-                href="/housatonic-maintenance"
-                className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${
-                  isActive('/housatonic-maintenance')
-                    ? 'border-white text-white'
-                    : 'border-transparent text-blue-100 hover:text-white hover:border-blue-200'
-                }`}
-              >
-                Housatonic
-              </Link>
               <div className="relative group">
                 <button
                   className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-semibold transition-colors ${

@@ -219,6 +219,11 @@ export default function OrderStatsPage() {
   const [insights, setInsights] = useState<InsightsData | null>(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
 
+  const getCategoryLabel = (category: string) => {
+    if (category === 'Housatonic Maintenance') return 'Store Maintenance'
+    return category
+  }
+
   useEffect(() => {
     fetchStores()
   }, [])
@@ -434,7 +439,7 @@ export default function OrderStatsPage() {
       // Add category groups and products for non-store-supply categories
       Object.entries(productsByCategory).forEach(([category, prods]) => {
         // Add category header row
-        const categoryRow = [category, ...Array(data.stores.length + 1).fill('')]
+        const categoryRow = [getCategoryLabel(category), ...Array(data.stores.length + 1).fill('')]
         worksheetData.push(categoryRow)
 
         // Add product rows (with explicit ordering for Ecom Warehouse / Ecom Books)
@@ -488,7 +493,7 @@ export default function OrderStatsPage() {
     const monthLabel = selectedMonth
       ? months.find((m) => m.value === selectedMonth)?.label || ''
       : 'All Months'
-    const filename = `Order_Stats_${selectedCategory}_${selectedYear}_${monthLabel.replace(/\s+/g, '_')}.xlsx`
+    const filename = `Order_Stats_${getCategoryLabel(selectedCategory)}_${selectedYear}_${monthLabel.replace(/\s+/g, '_')}.xlsx`
 
     // Export file
     XLSX.writeFile(wb, filename)
@@ -520,7 +525,7 @@ export default function OrderStatsPage() {
               <option value="Staff Uniforms">Staff Uniforms</option>
               <option value="ADC Supply">ADC Supply</option>
               <option value="ADC Maintenance">ADC Maintenance</option>
-              <option value="Housatonic Maintenance">Housatonic Maintenance</option>
+              <option value="Housatonic Maintenance">Store Maintenance</option>
               <option value="Ecom Warehouse">Ecom Warehouse</option>
               <option value="Ecom Books">Ecom Books</option>
             </select>
@@ -709,7 +714,7 @@ export default function OrderStatsPage() {
                             colSpan={data.stores.length + 2}
                             className="px-3 py-1 font-bold text-xs text-[#0066CC] sticky left-0 bg-[#E6F2FF] z-10"
                           >
-                            {category}
+                            {getCategoryLabel(category)}
                           </td>
                         </tr>
                         {prods.map((product) => {
@@ -765,7 +770,7 @@ export default function OrderStatsPage() {
               {/* Period Info */}
               <div className="mb-6 pb-4 border-b border-gray-200">
                 <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Category:</span> {selectedCategory} |{' '}
+                  <span className="font-semibold">Category:</span> {getCategoryLabel(selectedCategory)} |{' '}
                   <span className="font-semibold">Year:</span> {selectedYear} |{' '}
                   <span className="font-semibold">Month:</span>{' '}
                   {selectedMonth
