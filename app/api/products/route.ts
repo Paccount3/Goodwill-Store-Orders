@@ -6,6 +6,8 @@ import {
 } from '@/lib/catalog-order-forms'
 import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
