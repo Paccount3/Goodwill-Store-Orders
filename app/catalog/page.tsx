@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import {
   CATALOG_GROUP_OPTIONS,
@@ -312,6 +312,9 @@ export default function CatalogPage() {
     maxQuantity: '',
   })
 
+  /** Ignore stale responses when filters change or multiple GETs overlap. */
+  const productsFetchSeq = useRef(0)
+
   useEffect(() => {
     let cancelled = false
 
@@ -349,6 +352,7 @@ export default function CatalogPage() {
   }, [selectedCatalogGroup, search, adminGateLoading])
 
   const fetchProducts = async () => {
+    const seq = ++productsFetchSeq.current
     setLoading(true)
     setProductsError(null)
     try {
@@ -360,15 +364,24 @@ export default function CatalogPage() {
       const { products: list, error } = await fetchProductsFromApi<Product>(
         `/api/products?${params.toString()}`
       )
+      if (seq !== productsFetchSeq.current) return
+
+      if (error) {
+        setProductsError(error)
+        console.error('Error fetching products:', error)
+        return
+      }
+
       setProducts(list)
-      setProductsError(error)
-      if (error) console.error('Error fetching products:', error)
+      setProductsError(null)
     } catch (error) {
       console.error('Error fetching products:', error)
-      setProducts([])
+      if (seq !== productsFetchSeq.current) return
       setProductsError('Failed to load products')
     } finally {
-      setLoading(false)
+      if (seq === productsFetchSeq.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -553,14 +566,13 @@ export default function CatalogPage() {
         throw new Error('Failed to create product')
       }
 
-      const createdProduct = await res.json()
-      setProducts((prev) => [...prev, createdProduct].sort((a, b) => {
-        if (a.category !== b.category) return a.category.localeCompare(b.category)
-        return a.name.localeCompare(b.name)
-      }))
-      
+      await res.json()
+
       setNewProduct({ name: '', category: '', unitPriceCents: '', maxQuantity: '' })
       setShowAddForm(false)
+
+      // Reload from server so the list always matches the DB and races can’t leave a partial UI.
+      await fetchProducts()
     } catch (error) {
       console.error('Error creating product:', error)
       alert('Failed to create product. Please try again.')
