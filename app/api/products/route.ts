@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { STORE_SUPPLY_DB_CATEGORIES, isCatalogGroup } from '@/lib/catalog-order-forms'
 import {
-  STORE_SUPPLY_DB_CATEGORIES,
-  isCatalogGroup,
-} from '@/lib/catalog-order-forms'
-import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+  STORE_MAINTENANCE_ORDER_CATEGORY,
+  NSSO_EXCLUDED_CATEGORY_VALUES,
+  STAFF_APPAREL_CATEGORY,
+  ADC_SUPPLY_ORDER_CATEGORY,
+  ADC_MAINTENANCE_ORDER_CATEGORY,
+  EBOOKS_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ECOMM_SUPPLY_ORDER_CATEGORY,
+  ECOMM_MAINTENANCE_ORDER_CATEGORY,
+} from '@/lib/product-categories'
 import { formatPrismaError, logApiError } from '@/lib/api-prisma-error'
 
 export const dynamic = 'force-dynamic'
@@ -38,17 +45,7 @@ export async function GET(request: NextRequest) {
       conditions.push({ isUniform: false })
       // Also exclude ADC / Store Maintenance Order and E-commerce categories (these have dedicated forms)
       conditions.push({
-        category: {
-          notIn: [
-            'ADC Supply',
-            'ADC Maintenance',
-            STORE_MAINTENANCE_ORDER_CATEGORY,
-            'Ecom Warehouse',
-            'Ecom Books',
-            'Ebooks Maintenance',
-            'Ecomm Maintenance',
-          ]
-        }
+        category: { notIn: [...NSSO_EXCLUDED_CATEGORY_VALUES] },
       })
     }
 
@@ -63,25 +60,25 @@ export async function GET(request: NextRequest) {
           conditions.push({ category: STORE_MAINTENANCE_ORDER_CATEGORY })
           break
         case 'staffApparel':
-          conditions.push({ category: 'Staff Apparel' })
+          conditions.push({ category: STAFF_APPAREL_CATEGORY })
           break
         case 'adcSupply':
-          conditions.push({ category: 'ADC Supply' })
+          conditions.push({ category: ADC_SUPPLY_ORDER_CATEGORY })
           break
         case 'adcMaintenance':
-          conditions.push({ category: 'ADC Maintenance' })
+          conditions.push({ category: ADC_MAINTENANCE_ORDER_CATEGORY })
           break
         case 'ebooksSupply':
-          conditions.push({ category: 'Ecom Books' })
+          conditions.push({ category: EBOOKS_SUPPLY_ORDER_CATEGORY })
           break
         case 'ebooksMaintenance':
-          conditions.push({ category: 'Ebooks Maintenance' })
+          conditions.push({ category: EBOOKS_MAINTENANCE_ORDER_CATEGORY })
           break
         case 'ecommSupply':
-          conditions.push({ category: 'Ecom Warehouse' })
+          conditions.push({ category: ECOMM_SUPPLY_ORDER_CATEGORY })
           break
         case 'ecommMaintenance':
-          conditions.push({ category: 'Ecomm Maintenance' })
+          conditions.push({ category: ECOMM_MAINTENANCE_ORDER_CATEGORY })
           break
       }
     } else if (category) {

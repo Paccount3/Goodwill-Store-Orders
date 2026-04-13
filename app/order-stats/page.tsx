@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import {
+  STORE_MAINTENANCE_ORDER_CATEGORY,
+  STAFF_APPAREL_CATEGORY,
+  ADC_SUPPLY_ORDER_CATEGORY,
+  ADC_MAINTENANCE_ORDER_CATEGORY,
+  EBOOKS_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ECOMM_SUPPLY_ORDER_CATEGORY,
+  ECOMM_MAINTENANCE_ORDER_CATEGORY,
+  ORDER_STATS_STORE_SUPPLY_UI,
+  isInsightsNonStoreCategory,
+} from '@/lib/product-categories'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { fetchJsonArrayFromApi } from '@/lib/fetch-products-client'
 
@@ -297,7 +308,7 @@ export default function OrderStatsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('Store Supply')
+  const [selectedCategory, setSelectedCategory] = useState<string>(ORDER_STATS_STORE_SUPPLY_UI)
   const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([])
   const [allStores, setAllStores] = useState<Store[]>([])
   const [showStoreFilter, setShowStoreFilter] = useState(false)
@@ -305,10 +316,7 @@ export default function OrderStatsPage() {
   const [insights, setInsights] = useState<InsightsData | null>(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
 
-  const getCategoryLabel = (category: string) => {
-    if (category === STORE_MAINTENANCE_ORDER_CATEGORY) return 'Store Maintenance Order'
-    return category
-  }
+  const getCategoryLabel = (category: string) => category
 
   useEffect(() => {
     let cancelled = false
@@ -357,26 +365,14 @@ export default function OrderStatsPage() {
     setAllStores(items)
     if (error) console.error('Error fetching stores:', error)
     // Initialize with all stores selected only if not a non-store category
-    if (
-      items.length > 0 &&
-      selectedCategory !== 'ADC Supply' &&
-      selectedCategory !== 'ADC Maintenance' &&
-      selectedCategory !== STORE_MAINTENANCE_ORDER_CATEGORY &&
-      selectedCategory !== 'Ebooks Maintenance' &&
-      selectedCategory !== 'Ecomm Maintenance'
-    ) {
+    if (items.length > 0 && !isInsightsNonStoreCategory(selectedCategory)) {
       setSelectedStoreIds(items.map((store) => store.id))
     }
   }
 
   const fetchData = async () => {
     // Check if this is a non-store category
-    const isNonStoreCat =
-      selectedCategory === 'ADC Supply' ||
-      selectedCategory === 'ADC Maintenance' ||
-      selectedCategory === STORE_MAINTENANCE_ORDER_CATEGORY ||
-      selectedCategory === 'Ebooks Maintenance' ||
-      selectedCategory === 'Ecomm Maintenance'
+    const isNonStoreCat = isInsightsNonStoreCategory(selectedCategory)
     
     // Don't fetch if no stores are selected for non-store categories
     if (!isNonStoreCat && selectedStoreIds.length === 0) {
@@ -408,12 +404,7 @@ export default function OrderStatsPage() {
     }
   }
 
-  const isNonStoreCategory =
-    selectedCategory === 'ADC Supply' ||
-    selectedCategory === 'ADC Maintenance' ||
-    selectedCategory === STORE_MAINTENANCE_ORDER_CATEGORY ||
-    selectedCategory === 'Ebooks Maintenance' ||
-    selectedCategory === 'Ecomm Maintenance'
+  const isNonStoreCategory = isInsightsNonStoreCategory(selectedCategory)
 
   const handleStoreToggle = (storeId: number) => {
     setSelectedStoreIds(prev => {
@@ -467,9 +458,8 @@ export default function OrderStatsPage() {
     return acc
   }, {} as Record<string, ProductStats[]>) || {}
 
-  // Apply explicit ordering for Ecom Warehouse category to match Ecom Warehouse form
-  if (productsByCategory['Ecom Warehouse']) {
-    productsByCategory['Ecom Warehouse'] = [...productsByCategory['Ecom Warehouse']].sort((a, b) => {
+  if (productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]) {
+    productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOM_WAREHOUSE_DISPLAY_ORDER[a.productName] ?? 9999
       const orderB = ECOM_WAREHOUSE_DISPLAY_ORDER[b.productName] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -477,9 +467,8 @@ export default function OrderStatsPage() {
     })
   }
 
-  // Apply explicit ordering for Ecom Books category to match Ecom Ebooks form
-  if (productsByCategory['Ecom Books']) {
-    productsByCategory['Ecom Books'] = [...productsByCategory['Ecom Books']].sort((a, b) => {
+  if (productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]) {
+    productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.productName] ?? 9999
       const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.productName] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -487,8 +476,8 @@ export default function OrderStatsPage() {
     })
   }
 
-  if (productsByCategory['Ebooks Maintenance']) {
-    productsByCategory['Ebooks Maintenance'] = [...productsByCategory['Ebooks Maintenance']].sort((a, b) => {
+  if (productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]) {
+    productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
       const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -496,8 +485,8 @@ export default function OrderStatsPage() {
     })
   }
 
-  if (productsByCategory['Ecomm Maintenance']) {
-    productsByCategory['Ecomm Maintenance'] = [...productsByCategory['Ecomm Maintenance']].sort((a, b) => {
+  if (productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]) {
+    productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
       const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -507,7 +496,7 @@ export default function OrderStatsPage() {
 
   // Flattened, ordered list for Store Supply aggregate (no categories)
   const storeSupplyProducts: ProductStats[] =
-    selectedCategory === 'Store Supply' && data
+    selectedCategory === ORDER_STATS_STORE_SUPPLY_UI && data
       ? [...data.products].sort((a, b) => {
           const orderA = STORE_SUPPLY_DISPLAY_ORDER[a.productName] ?? 9999
           const orderB = STORE_SUPPLY_DISPLAY_ORDER[b.productName] ?? 9999
@@ -573,7 +562,7 @@ export default function OrderStatsPage() {
     const headerRow = ['Item', ...data.stores.map(store => store.name), 'TOTAL']
     worksheetData.push(headerRow)
 
-    if (selectedCategory === 'Store Supply') {
+    if (selectedCategory === ORDER_STATS_STORE_SUPPLY_UI) {
       // Flat list for Store Supply aggregate, no categories
       storeSupplyProducts.forEach((product) => {
         const productRow = [
@@ -595,28 +584,28 @@ export default function OrderStatsPage() {
 
         // Add product rows (with explicit ordering for Ecom Warehouse / Ecom Books)
         const sortedProds =
-          category === 'Ecom Warehouse'
+          category === ECOMM_SUPPLY_ORDER_CATEGORY
             ? [...prods].sort((a, b) => {
                 const orderA = ECOM_WAREHOUSE_DISPLAY_ORDER[a.productName] ?? 9999
                 const orderB = ECOM_WAREHOUSE_DISPLAY_ORDER[b.productName] ?? 9999
                 if (orderA !== orderB) return orderA - orderB
                 return a.productName.localeCompare(b.productName)
               })
-            : category === 'Ecom Books'
+            : category === EBOOKS_SUPPLY_ORDER_CATEGORY
             ? [...prods].sort((a, b) => {
                 const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.productName] ?? 9999
                 const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.productName] ?? 9999
                 if (orderA !== orderB) return orderA - orderB
                 return a.productName.localeCompare(b.productName)
               })
-            : category === 'Ebooks Maintenance'
+            : category === EBOOKS_MAINTENANCE_ORDER_CATEGORY
             ? [...prods].sort((a, b) => {
                 const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
                 const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
                 if (orderA !== orderB) return orderA - orderB
                 return a.productName.localeCompare(b.productName)
               })
-            : category === 'Ecomm Maintenance'
+            : category === ECOMM_MAINTENANCE_ORDER_CATEGORY
             ? [...prods].sort((a, b) => {
                 const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.productName] ?? 9999
                 const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.productName] ?? 9999
@@ -682,13 +671,7 @@ export default function OrderStatsPage() {
               onChange={(e) => {
                 setSelectedCategory(e.target.value)
                 // Reset store filter when category changes
-                if (
-                  e.target.value === 'ADC Supply' ||
-                  e.target.value === 'ADC Maintenance' ||
-                  e.target.value === STORE_MAINTENANCE_ORDER_CATEGORY ||
-                  e.target.value === 'Ebooks Maintenance' ||
-                  e.target.value === 'Ecomm Maintenance'
-                ) {
+                if (isInsightsNonStoreCategory(e.target.value)) {
                   setSelectedStoreIds([])
                 } else {
                   setSelectedStoreIds(allStores.map(store => store.id))
@@ -696,15 +679,15 @@ export default function OrderStatsPage() {
               }}
               className="border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
             >
-              <option value="Store Supply">Store Supply</option>
+              <option value={ORDER_STATS_STORE_SUPPLY_UI}>Store Supply</option>
               <option value={STORE_MAINTENANCE_ORDER_CATEGORY}>Store Maintenance Order</option>
-              <option value="Staff Apparel">Staff Apparel</option>
-              <option value="ADC Supply">ADC Supply</option>
-              <option value="ADC Maintenance">ADC Maintenance</option>
-              <option value="Ecom Warehouse">Ecom Warehouse</option>
-              <option value="Ecom Books">Ecom Books</option>
-              <option value="Ebooks Maintenance">Ebooks Maintenance</option>
-              <option value="Ecomm Maintenance">Ecomm Maintenance</option>
+              <option value={STAFF_APPAREL_CATEGORY}>Staff Apparel</option>
+              <option value={ADC_SUPPLY_ORDER_CATEGORY}>ADC Supply Order</option>
+              <option value={ADC_MAINTENANCE_ORDER_CATEGORY}>ADC Maintenance Order</option>
+              <option value={EBOOKS_SUPPLY_ORDER_CATEGORY}>Ebooks Supply Order</option>
+              <option value={EBOOKS_MAINTENANCE_ORDER_CATEGORY}>Ebooks Maintenance Order</option>
+              <option value={ECOMM_SUPPLY_ORDER_CATEGORY}>Ecomm Supply Order</option>
+              <option value={ECOMM_MAINTENANCE_ORDER_CATEGORY}>Ecomm Maintenance Order</option>
             </select>
           </div>
           {!isNonStoreCategory && (
@@ -861,7 +844,7 @@ export default function OrderStatsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {selectedCategory === 'Store Supply'
+                {selectedCategory === ORDER_STATS_STORE_SUPPLY_UI
                   ? storeSupplyProducts.map((product) => (
                       <tr key={product.productId} className="hover:bg-blue-50">
                         <td className="px-3 py-1 text-xs font-medium text-gray-900 border-r border-gray-200 sticky left-0 bg-white z-10 min-w-[200px]">

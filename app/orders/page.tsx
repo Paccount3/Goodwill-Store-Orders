@@ -228,9 +228,9 @@ export default function OrdersHubPage() {
       case 'EEB':
         return 'EBooks Supply'
       case 'EBM':
-        return 'Ebooks Maintenance'
+        return 'Ebooks Maintenance Order'
       case 'ECM':
-        return 'Ecomm Maintenance'
+        return 'Ecomm Maintenance Order'
       default:
         return orderType
     }

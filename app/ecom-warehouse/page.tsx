@@ -157,7 +157,7 @@ export default function EcomWarehousePage() {
   const fetchProducts = async () => {
     try {
       const { products, error } = await fetchProductsFromApi<Product>(
-        '/api/products?activeOnly=true&category=Ecom Warehouse'
+        `/api/products?activeOnly=true&category=${encodeURIComponent('Ecomm Supply Order')}`
       )
       setProducts(products)
       if (error) console.error('Error fetching products:', error)
@@ -453,9 +453,9 @@ export default function EcomWarehousePage() {
         <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
           {Object.keys(productsByCategory).length === 0 ? (
             <div className="text-center py-8 text-gray-600">
-              <p>No Ecom Warehouse products found.</p>
+              <p>No Ecomm Supply products found.</p>
               <p className="text-xs mt-1">
-                Add products in the Item Catalog under the &quot;Ecom Warehouse&quot; category.
+                Add products in the Item Catalog under the &quot;Ecomm Supply Order&quot; category.
               </p>
             </div>
           ) : (

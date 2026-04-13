@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import {
+  STAFF_APPAREL_CATEGORY,
+  isInsightsNonStoreCategory,
+  isNssoStoreSupplyStatsCategory,
+  ORDER_STATS_STORE_SUPPLY_UI,
+  productCategoryMatchesStatsFilter,
+  canonicalProductCategory,
+} from '@/lib/product-categories'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,33 +57,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if this is a non-store category (not associated with stores)
-    const isNonStoreCategory =
-      category === 'ADC Supply' ||
-      category === 'ADC Maintenance' ||
-      category === STORE_MAINTENANCE_ORDER_CATEGORY ||
-      category === 'Ebooks Maintenance' ||
-      category === 'Ecomm Maintenance'
+    const isNonStoreCategory = isInsightsNonStoreCategory(category)
 
     // Filter orders by category if specified
     let filteredOrders = orders
     if (category) {
-      if (category === 'Store Supply') {
-        // Exclude non-store and specialized categories
+      if (category === ORDER_STATS_STORE_SUPPLY_UI) {
         filteredOrders = orders.filter((order) =>
-          order.orderLines.some(
-            (line) =>
-              line.product.category !== 'ADC Supply' &&
-              line.product.category !== 'ADC Maintenance' &&
-              line.product.category !== STORE_MAINTENANCE_ORDER_CATEGORY &&
-              line.product.category !== 'Staff Apparel' &&
-              line.product.category !== 'Ecom Warehouse' &&
-              line.product.category !== 'Ecom Books' &&
-              line.product.category !== 'Ebooks Maintenance' &&
-              line.product.category !== 'Ecomm Maintenance'
+          order.orderLines.some((line) =>
+            isNssoStoreSupplyStatsCategory(line.product.category)
           )
         )
-      } else if (category === 'Staff Apparel') {
+      } else if (category === STAFF_APPAREL_CATEGORY) {
         // Only include orders with uniform products
         filteredOrders = orders.filter((order) =>
           order.orderLines.some((line) => line.product.isUniform === true)
@@ -101,14 +93,9 @@ export async function GET(request: NextRequest) {
     if (isNonStoreCategory) {
       // For non-store categories, aggregate all into a single entry
       const totalSpend = filteredOrders.reduce((sum, order) => sum + order.subtotalCents, 0)
-      const nonStoreDisplayName =
-        category === STORE_MAINTENANCE_ORDER_CATEGORY
-          ? 'Store Maintenance Order'
-          : category === 'Ebooks Maintenance'
-          ? 'Ebooks Maintenance'
-          : category === 'Ecomm Maintenance'
-          ? 'Ecomm Maintenance'
-          : (category || 'Unknown')
+      const nonStoreDisplayName = category
+        ? canonicalProductCategory(category)
+        : 'Unknown'
       storeSpend[-1] = {
         storeId: -1,
         storeName: nonStoreDisplayName,
@@ -146,22 +133,17 @@ export async function GET(request: NextRequest) {
       order.orderLines.forEach((line) => {
         // Only include lines that match the category filter
         if (category) {
-          if (category === 'Store Supply') {
-            if (
-              line.product.category === 'ADC Supply' ||
-              line.product.category === 'ADC Maintenance' ||
-              line.product.category === STORE_MAINTENANCE_ORDER_CATEGORY ||
-              line.product.category === 'Staff Apparel'
-            ) {
-              return // Skip this line
+          if (category === ORDER_STATS_STORE_SUPPLY_UI) {
+            if (!isNssoStoreSupplyStatsCategory(line.product.category)) {
+              return
             }
-          } else if (category === 'Staff Apparel') {
+          } else if (category === STAFF_APPAREL_CATEGORY) {
             if (line.product.isUniform !== true) {
               return // Skip this line
             }
           } else {
-            if (line.product.category !== category) {
-              return // Skip this line
+            if (!productCategoryMatchesStatsFilter(line.product.category, category)) {
+              return
             }
           }
         }

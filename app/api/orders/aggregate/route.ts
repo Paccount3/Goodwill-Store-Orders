@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import {
+  isInsightsNonStoreCategory,
+  ORDER_STATS_STORE_SUPPLY_UI,
+  NSSO_EXCLUDED_CATEGORY_VALUES,
+  dbCategoryValuesForStatsFilter,
+  canonicalProductCategory,
+} from '@/lib/product-categories'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,27 +56,15 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if this is a non-store category (not associated with stores)
-    const isNonStoreCategory =
-      category === 'ADC Supply' ||
-      category === 'ADC Maintenance' ||
-      category === STORE_MAINTENANCE_ORDER_CATEGORY ||
-      category === 'Ebooks Maintenance' ||
-      category === 'Ecomm Maintenance'
+    const isNonStoreCategory = isInsightsNonStoreCategory(category)
 
     // Get all stores and products for the table structure
     let stores: Array<{ id: number; storeNumber: string; name: string }> = []
     
     if (isNonStoreCategory) {
-      // For ADC / Store Maintenance Order categories, create a single "store" entry with the category name
-      const nonStoreDisplayName =
-        category === STORE_MAINTENANCE_ORDER_CATEGORY
-          ? 'Store Maintenance Order'
-          : category === 'Ebooks Maintenance'
-          ? 'Ebooks Maintenance'
-          : category === 'Ecomm Maintenance'
-          ? 'Ecomm Maintenance'
-          : category
+      const nonStoreDisplayName = category
+        ? canonicalProductCategory(category)
+        : 'Unknown'
       stores = [{
         id: -1, // Special ID for non-store categories
         storeNumber: '',
@@ -97,23 +91,10 @@ export async function GET(request: NextRequest) {
 
     // Filter products based on category selection
     const productWhere: any = { isActive: true }
-    if (category === 'Store Supply') {
-      // Exclude non-store and specialized categories
-      productWhere.category = {
-        notIn: [
-          'ADC Supply',
-          'ADC Maintenance',
-          STORE_MAINTENANCE_ORDER_CATEGORY,
-          'Staff Apparel',
-          'Ecom Warehouse',
-          'Ecom Books',
-          'Ebooks Maintenance',
-          'Ecomm Maintenance',
-        ]
-      }
+    if (category === ORDER_STATS_STORE_SUPPLY_UI) {
+      productWhere.category = { notIn: [...NSSO_EXCLUDED_CATEGORY_VALUES] }
     } else if (category) {
-      // Show only the selected category
-      productWhere.category = category
+      productWhere.category = { in: dbCategoryValuesForStatsFilter(category) }
     }
 
     const products = await prisma.product.findMany({

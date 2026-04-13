@@ -1,20 +1,23 @@
 /**
  * Item Catalog filter + labels aligned with order forms.
- * Product rows still use granular `Product.category` values in the database.
+ * `Product.category` uses the canonical strings in `lib/product-categories.ts`.
  */
 
-import { STORE_MAINTENANCE_ORDER_CATEGORY } from './product-categories'
+import {
+  STORE_SUPPLY_ORDER_CATEGORY,
+  STORE_MAINTENANCE_ORDER_CATEGORY,
+  STAFF_APPAREL_CATEGORY,
+  ADC_SUPPLY_ORDER_CATEGORY,
+  ADC_MAINTENANCE_ORDER_CATEGORY,
+  EBOOKS_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ECOMM_SUPPLY_ORDER_CATEGORY,
+  ECOMM_MAINTENANCE_ORDER_CATEGORY,
+  PRODUCT_ORDER_FORM_CATEGORIES,
+} from './product-categories'
 
-export const STORE_SUPPLY_DB_CATEGORIES = [
-  'General Supplies',
-  'Labels, Tape, & Office Supplies',
-  'Gloves & PPE',
-  'Stickers & Tags',
-  'Bags & Paper',
-  'Hangers',
-  'Store Apparel',
-  'Miscellaneous',
-] as const
+/** NSSO aggregate: one DB category for all store-supply items. */
+export const STORE_SUPPLY_DB_CATEGORIES = [STORE_SUPPLY_ORDER_CATEGORY] as const
 
 export type CatalogGroup =
   | 'storeSupply'
@@ -28,18 +31,18 @@ export type CatalogGroup =
   | 'ecommMaintenance'
 
 export const CATALOG_GROUP_LABELS: Record<CatalogGroup, string> = {
-  storeSupply: 'Store Supply Order',
-  storeMaintenance: 'Store Maintenance Order',
-  staffApparel: 'Staff Apparel',
-  adcSupply: 'ADC Supply Order',
-  adcMaintenance: 'ADC Maintenance Order',
-  ebooksSupply: 'Ebooks Supply Order',
-  ebooksMaintenance: 'Ebooks Maintenance Order',
-  ecommSupply: 'Ecomm Supply Order',
-  ecommMaintenance: 'Ecomm Maintenance Order',
+  storeSupply: STORE_SUPPLY_ORDER_CATEGORY,
+  storeMaintenance: STORE_MAINTENANCE_ORDER_CATEGORY,
+  staffApparel: STAFF_APPAREL_CATEGORY,
+  adcSupply: ADC_SUPPLY_ORDER_CATEGORY,
+  adcMaintenance: ADC_MAINTENANCE_ORDER_CATEGORY,
+  ebooksSupply: EBOOKS_SUPPLY_ORDER_CATEGORY,
+  ebooksMaintenance: EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ecommSupply: ECOMM_SUPPLY_ORDER_CATEGORY,
+  ecommMaintenance: ECOMM_MAINTENANCE_ORDER_CATEGORY,
 }
 
-/** Order of entries in the category filter dropdown */
+/** Order of entries in the catalog “Order form” filter dropdown */
 export const CATALOG_GROUP_OPTIONS: { value: CatalogGroup; label: string }[] = [
   { value: 'storeSupply', label: CATALOG_GROUP_LABELS.storeSupply },
   { value: 'storeMaintenance', label: CATALOG_GROUP_LABELS.storeMaintenance },
@@ -53,45 +56,36 @@ export const CATALOG_GROUP_OPTIONS: { value: CatalogGroup; label: string }[] = [
 ]
 
 /**
- * Non–store-supply DB categories, in on-page section order.
- * Matches filter / form order after Store Supply Order: maintenance → staff → ADC → ebooks → ecomm.
+ * Non–store-supply DB categories, in on-page section order (below the NSSO block).
  */
 export const ORDER_FORM_DB_CATEGORY_ORDER = [
   STORE_MAINTENANCE_ORDER_CATEGORY,
-  'Staff Apparel',
-  'ADC Supply',
-  'ADC Maintenance',
-  'Ecom Books',
-  'Ebooks Maintenance',
-  'Ecom Warehouse',
-  'Ecomm Maintenance',
+  STAFF_APPAREL_CATEGORY,
+  ADC_SUPPLY_ORDER_CATEGORY,
+  ADC_MAINTENANCE_ORDER_CATEGORY,
+  EBOOKS_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ECOMM_SUPPLY_ORDER_CATEGORY,
+  ECOMM_MAINTENANCE_ORDER_CATEGORY,
 ] as const
 
-/** Section titles for grouped catalog tables (DB category → heading) */
+/** Section titles for grouped catalog tables */
 export const DB_CATEGORY_SECTION_LABEL: Record<string, string> = {
-  'ADC Supply': CATALOG_GROUP_LABELS.adcSupply,
-  'ADC Maintenance': CATALOG_GROUP_LABELS.adcMaintenance,
-  [STORE_MAINTENANCE_ORDER_CATEGORY]: CATALOG_GROUP_LABELS.storeMaintenance,
-  'Staff Apparel': CATALOG_GROUP_LABELS.staffApparel,
-  'Ecom Warehouse': CATALOG_GROUP_LABELS.ecommSupply,
-  'Ecom Books': CATALOG_GROUP_LABELS.ebooksSupply,
-  'Ebooks Maintenance': CATALOG_GROUP_LABELS.ebooksMaintenance,
-  'Ecomm Maintenance': CATALOG_GROUP_LABELS.ecommMaintenance,
-  'Staff Uniforms': CATALOG_GROUP_LABELS.staffApparel,
+  [STORE_SUPPLY_ORDER_CATEGORY]: STORE_SUPPLY_ORDER_CATEGORY,
+  [STORE_MAINTENANCE_ORDER_CATEGORY]: STORE_MAINTENANCE_ORDER_CATEGORY,
+  [STAFF_APPAREL_CATEGORY]: STAFF_APPAREL_CATEGORY,
+  [ADC_SUPPLY_ORDER_CATEGORY]: ADC_SUPPLY_ORDER_CATEGORY,
+  [ADC_MAINTENANCE_ORDER_CATEGORY]: ADC_MAINTENANCE_ORDER_CATEGORY,
+  [EBOOKS_SUPPLY_ORDER_CATEGORY]: EBOOKS_SUPPLY_ORDER_CATEGORY,
+  [EBOOKS_MAINTENANCE_ORDER_CATEGORY]: EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  [ECOMM_SUPPLY_ORDER_CATEGORY]: ECOMM_SUPPLY_ORDER_CATEGORY,
+  [ECOMM_MAINTENANCE_ORDER_CATEGORY]: ECOMM_MAINTENANCE_ORDER_CATEGORY,
+  'Staff Uniforms': STAFF_APPAREL_CATEGORY,
 }
 
-/** Add-product datalist: granular DB `category` strings (store supply stays split). */
-export const ADD_PRODUCT_DB_CATEGORY_OPTIONS: { value: string; label: string }[] = [
-  ...STORE_SUPPLY_DB_CATEGORIES.map((c) => ({ value: c, label: c })),
-  { value: 'Staff Apparel', label: 'Staff Apparel' },
-  { value: 'ADC Supply', label: 'ADC Supply Order' },
-  { value: 'ADC Maintenance', label: 'ADC Maintenance Order' },
-  { value: STORE_MAINTENANCE_ORDER_CATEGORY, label: 'Store Maintenance Order' },
-  { value: 'Ecom Warehouse', label: 'Ecomm Supply Order' },
-  { value: 'Ecom Books', label: 'Ebooks Supply Order' },
-  { value: 'Ebooks Maintenance', label: 'Ebooks Maintenance Order' },
-  { value: 'Ecomm Maintenance', label: 'Ecomm Maintenance Order' },
-]
+/** Add-product datalist: canonical category strings only. */
+export const ADD_PRODUCT_DB_CATEGORY_OPTIONS: { value: string; label: string }[] =
+  PRODUCT_ORDER_FORM_CATEGORIES.map((c) => ({ value: c, label: c }))
 
 export function isCatalogGroup(s: string | null): s is CatalogGroup {
   return (

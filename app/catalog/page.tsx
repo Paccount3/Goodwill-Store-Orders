@@ -9,6 +9,12 @@ import {
   ORDER_FORM_DB_CATEGORY_ORDER,
   DB_CATEGORY_SECTION_LABEL,
 } from '@/lib/catalog-order-forms'
+import {
+  ECOMM_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_SUPPLY_ORDER_CATEGORY,
+  EBOOKS_MAINTENANCE_ORDER_CATEGORY,
+  ECOMM_MAINTENANCE_ORDER_CATEGORY,
+} from '@/lib/product-categories'
 import { fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Product {
@@ -617,9 +623,9 @@ export default function CatalogPage() {
     return acc
   }, {} as Record<string, Product[]>)
 
-  // Apply explicit ordering for Ecom Warehouse category to match Ecom Warehouse form
-  if (productsByCategory['Ecom Warehouse']) {
-    productsByCategory['Ecom Warehouse'] = [...productsByCategory['Ecom Warehouse']].sort((a, b) => {
+  // Apply explicit ordering for Ecomm Supply to match the e-comm warehouse order form
+  if (productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]) {
+    productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOM_WAREHOUSE_DISPLAY_ORDER[a.name] ?? 9999
       const orderB = ECOM_WAREHOUSE_DISPLAY_ORDER[b.name] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -627,9 +633,9 @@ export default function CatalogPage() {
     })
   }
 
-  // Apply explicit ordering for Ecom Books category to match Ecom Ebooks form
-  if (productsByCategory['Ecom Books']) {
-    productsByCategory['Ecom Books'] = [...productsByCategory['Ecom Books']].sort((a, b) => {
+  // Apply explicit ordering for Ebooks Supply to match the e-books order form
+  if (productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]) {
+    productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.name] ?? 9999
       const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.name] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -637,9 +643,8 @@ export default function CatalogPage() {
     })
   }
 
-  // Apply explicit ordering for Ebooks Maintenance category to match its form
-  if (productsByCategory['Ebooks Maintenance']) {
-    productsByCategory['Ebooks Maintenance'] = [...productsByCategory['Ebooks Maintenance']].sort((a, b) => {
+  if (productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]) {
+    productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
       const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
       if (orderA !== orderB) return orderA - orderB
@@ -647,8 +652,8 @@ export default function CatalogPage() {
     })
   }
 
-  if (productsByCategory['Ecomm Maintenance']) {
-    productsByCategory['Ecomm Maintenance'] = [...productsByCategory['Ecomm Maintenance']].sort((a, b) => {
+  if (productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]) {
+    productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
       const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
       const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
       if (orderA !== orderB) return orderA - orderB

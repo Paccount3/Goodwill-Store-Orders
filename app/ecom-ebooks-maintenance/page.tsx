@@ -135,7 +135,7 @@ export default function EcomEbooksMaintenancePage() {
   const fetchProducts = async () => {
     try {
       const { products, error } = await fetchProductsFromApi<Product>(
-        '/api/products?activeOnly=true&category=Ebooks Maintenance'
+        `/api/products?activeOnly=true&category=${encodeURIComponent('Ebooks Maintenance Order')}`
       )
       setProducts(products)
       if (error) console.error('Error fetching products:', error)

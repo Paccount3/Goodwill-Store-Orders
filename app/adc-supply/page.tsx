@@ -113,7 +113,7 @@ export default function ADCSupplyPage() {
   const fetchProducts = async () => {
     try {
       const { products, error } = await fetchProductsFromApi<Product>(
-        '/api/products?activeOnly=true&category=ADC Supply'
+        `/api/products?activeOnly=true&category=${encodeURIComponent('ADC Supply Order')}`
       )
       setProducts(products)
       if (error) console.error('Error fetching products:', error)
