@@ -13,6 +13,7 @@ import {
   ECOMM_MAINTENANCE_ORDER_CATEGORY,
 } from '@/lib/product-categories'
 import { formatPrismaError, logApiError } from '@/lib/api-prisma-error'
+import { buildUniformSizePriceMap } from '@/lib/uniform-helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -145,20 +146,52 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert dollars to cents if needed
-    const priceInCents = Math.round(unitPriceCents * 100)
+    const priceInCents = Math.round(Number(unitPriceCents) * 100)
+
+    let finalIsUniform = Boolean(isUniform)
+    let sizesJson: string | null = null
+    let colorsJson: string | null = null
+    let styleVal: string | null = style || null
+    let sizeMapJson: string | null = null
+
+    if (category === STAFF_APPAREL_CATEGORY) {
+      const sizes = Array.isArray(availableSizes) ? availableSizes : null
+      const colors = Array.isArray(availableColors) ? availableColors : null
+      if (!sizes?.length || !colors?.length) {
+        return NextResponse.json(
+          {
+            error:
+              'Staff Apparel requires availableSizes and availableColors (non-empty arrays of strings)',
+          },
+          { status: 400 }
+        )
+      }
+      finalIsUniform = true
+      sizesJson = JSON.stringify(sizes)
+      colorsJson = JSON.stringify(colors)
+      const map =
+        sizePriceMap && typeof sizePriceMap === 'object' && !Array.isArray(sizePriceMap)
+          ? (sizePriceMap as Record<string, number>)
+          : buildUniformSizePriceMap(sizes.map(String), priceInCents)
+      sizeMapJson = JSON.stringify(map)
+    } else {
+      sizesJson = availableSizes ? JSON.stringify(availableSizes) : null
+      colorsJson = availableColors ? JSON.stringify(availableColors) : null
+      sizeMapJson = sizePriceMap ? JSON.stringify(sizePriceMap) : null
+    }
 
     const product = await prisma.product.create({
       data: {
         name,
         category,
         unitPriceCents: priceInCents,
-        maxQuantity: parseInt(maxQuantity),
+        maxQuantity: parseInt(maxQuantity, 10),
         isActive: true,
-        isUniform: isUniform || false,
-        availableSizes: availableSizes ? JSON.stringify(availableSizes) : null,
-        availableColors: availableColors ? JSON.stringify(availableColors) : null,
-        style: style || null,
-        sizePriceMap: sizePriceMap ? JSON.stringify(sizePriceMap) : null,
+        isUniform: finalIsUniform,
+        availableSizes: sizesJson,
+        availableColors: colorsJson,
+        style: styleVal,
+        sizePriceMap: sizeMapJson,
       },
     })
 

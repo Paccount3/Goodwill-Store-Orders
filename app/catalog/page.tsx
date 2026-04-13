@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import {
   CATALOG_GROUP_OPTIONS,
@@ -14,8 +14,27 @@ import {
   EBOOKS_SUPPLY_ORDER_CATEGORY,
   EBOOKS_MAINTENANCE_ORDER_CATEGORY,
   ECOMM_MAINTENANCE_ORDER_CATEGORY,
+  STAFF_APPAREL_CATEGORY,
 } from '@/lib/product-categories'
+import { parseCommaSeparatedLabels, uniformJsonArrayToCommaText } from '@/lib/uniform-helpers'
 import { fetchProductsFromApi } from '@/lib/fetch-products-client'
+
+type UniformStyle = 'Unisex' | 'Men' | 'Women'
+
+const NEW_PRODUCT_INITIAL = {
+  name: '',
+  category: '',
+  unitPriceCents: '',
+  maxQuantity: '',
+  sizesText: 'XS, S, M, L, XL, XXL, 3XL, 4XL',
+  colorsText: 'Navy Blue, Royal Blue, White',
+  uniformStyle: 'Unisex' as UniformStyle,
+}
+
+function parseUniformStyle(raw: string | null | undefined): UniformStyle {
+  if (raw === 'Men' || raw === 'Women' || raw === 'Unisex') return raw
+  return 'Unisex'
+}
 
 interface Product {
   id: number
@@ -305,12 +324,15 @@ export default function CatalogPage() {
   const [editingTotalInStock, setEditingTotalInStock] = useState<Record<number, number>>({})
   const [saving, setSaving] = useState<Record<number, boolean>>({})
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    category: '',
-    unitPriceCents: '',
-    maxQuantity: '',
+  const [newProduct, setNewProduct] = useState({ ...NEW_PRODUCT_INITIAL })
+  const [uniformEditingId, setUniformEditingId] = useState<number | null>(null)
+  const [uniformDraft, setUniformDraft] = useState({
+    sizesText: '',
+    colorsText: '',
+    style: 'Unisex' as UniformStyle,
+    unitPriceDollars: '',
   })
+  const [savingUniform, setSavingUniform] = useState(false)
 
   /** Ignore stale responses when filters change or multiple GETs overlap. */
   const productsFetchSeq = useRef(0)
@@ -544,38 +566,114 @@ export default function CatalogPage() {
     setEditingTotalInStock(newEditing)
   }
 
+  const openUniformEdit = (product: Product) => {
+    setUniformEditingId(product.id)
+    setUniformDraft({
+      sizesText: uniformJsonArrayToCommaText(product.availableSizes ?? null),
+      colorsText: uniformJsonArrayToCommaText(product.availableColors ?? null),
+      style: parseUniformStyle(product.style),
+      unitPriceDollars: (product.unitPriceCents / 100).toFixed(2),
+    })
+  }
+
+  const handleSaveUniform = async (productId: number) => {
+    const sizes = parseCommaSeparatedLabels(uniformDraft.sizesText)
+    const colors = parseCommaSeparatedLabels(uniformDraft.colorsText)
+    if (!sizes.length || !colors.length) {
+      alert('Staff Apparel requires at least one size and one color.')
+      return
+    }
+
+    const product = products.find((p) => p.id === productId)
+    const priceDollars = parseCurrency(uniformDraft.unitPriceDollars)
+    const priceChanged =
+      product !== undefined &&
+      Math.round(priceDollars * 100) !== product.unitPriceCents
+
+    setSavingUniform(true)
+    try {
+      const body: Record<string, unknown> = {
+        availableSizes: sizes,
+        availableColors: colors,
+        style: uniformDraft.style,
+      }
+      if (priceChanged) {
+        body.unitPriceCents = priceDollars
+      }
+
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Failed to update uniform')
+      }
+
+      const updated = await res.json()
+      setProducts((prev) => prev.map((p) => (p.id === productId ? updated : p)))
+      setUniformEditingId(null)
+    } catch (error) {
+      console.error('Error saving uniform:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save uniform details.')
+    } finally {
+      setSavingUniform(false)
+    }
+  }
+
   const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.category || !newProduct.unitPriceCents || !newProduct.maxQuantity) {
       alert('Please fill in all fields')
       return
     }
 
+    const isStaff = newProduct.category === STAFF_APPAREL_CATEGORY
+    if (isStaff) {
+      const sizes = parseCommaSeparatedLabels(newProduct.sizesText)
+      const colors = parseCommaSeparatedLabels(newProduct.colorsText)
+      if (!sizes.length || !colors.length) {
+        alert('Staff Apparel requires at least one size and one color (comma-separated).')
+        return
+      }
+    }
+
     try {
+      const payload: Record<string, unknown> = {
+        name: newProduct.name,
+        category: newProduct.category,
+        unitPriceCents: parseFloat(newProduct.unitPriceCents),
+        maxQuantity: parseInt(newProduct.maxQuantity, 10),
+      }
+      if (isStaff) {
+        payload.isUniform = true
+        payload.availableSizes = parseCommaSeparatedLabels(newProduct.sizesText)
+        payload.availableColors = parseCommaSeparatedLabels(newProduct.colorsText)
+        payload.style = newProduct.uniformStyle
+      }
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newProduct.name,
-          category: newProduct.category,
-          unitPriceCents: parseFloat(newProduct.unitPriceCents),
-          maxQuantity: parseInt(newProduct.maxQuantity),
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
-        throw new Error('Failed to create product')
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Failed to create product')
       }
 
       await res.json()
 
-      setNewProduct({ name: '', category: '', unitPriceCents: '', maxQuantity: '' })
+      setNewProduct({ ...NEW_PRODUCT_INITIAL })
       setShowAddForm(false)
 
       // Reload from server so the list always matches the DB and races can’t leave a partial UI.
       await fetchProducts()
     } catch (error) {
       console.error('Error creating product:', error)
-      alert('Failed to create product. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to create product. Please try again.')
     }
   }
 
@@ -690,7 +788,13 @@ export default function CatalogPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-[#0066CC]">Item Catalog</h1>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          type="button"
+          onClick={() => {
+            if (showAddForm) {
+              setNewProduct({ ...NEW_PRODUCT_INITIAL })
+            }
+            setShowAddForm(!showAddForm)
+          }}
           className="bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition shadow-md"
         >
           {showAddForm ? 'Cancel' : '+ Add Product'}
@@ -701,7 +805,7 @@ export default function CatalogPage() {
       {showAddForm && (
         <div className="bg-white shadow-lg rounded-lg p-6 mb-6 border border-gray-200">
           <h2 className="text-xl font-bold text-[#0066CC] mb-4">Add New Product</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">
                 Product Name *
@@ -747,6 +851,11 @@ export default function CatalogPage() {
                 className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
                 placeholder="0.00"
               />
+              {newProduct.category === STAFF_APPAREL_CATEGORY ? (
+                <p className="mt-1 text-xs text-gray-600">
+                  Base price for every size (same as the staff uniforms order form).
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">
@@ -762,8 +871,54 @@ export default function CatalogPage() {
               />
             </div>
           </div>
+          {newProduct.category === STAFF_APPAREL_CATEGORY && (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  Sizes * <span className="font-normal text-gray-600">(comma-separated)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={newProduct.sizesText}
+                  onChange={(e) => setNewProduct({ ...newProduct, sizesText: e.target.value })}
+                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                  placeholder="XS, S, M, L, XL"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1">Style *</label>
+                <select
+                  value={newProduct.uniformStyle}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      uniformStyle: e.target.value as UniformStyle,
+                    })
+                  }
+                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                >
+                  <option value="Unisex">Unisex</option>
+                  <option value="Men">Men</option>
+                  <option value="Women">Women</option>
+                </select>
+              </div>
+              <div className="md:col-span-3">
+                <label className="block text-sm font-semibold text-gray-900 mb-1">
+                  Colors * <span className="font-normal text-gray-600">(comma-separated)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={newProduct.colorsText}
+                  onChange={(e) => setNewProduct({ ...newProduct, colorsText: e.target.value })}
+                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
+                  placeholder="Navy Blue, Royal Blue, White"
+                />
+              </div>
+            </div>
+          )}
           <div className="mt-4">
             <button
+              type="button"
               onClick={handleAddProduct}
               className="bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition shadow-md"
             >
@@ -1067,9 +1222,11 @@ export default function CatalogPage() {
                       const currentPrice = isEditing
                         ? editingPrice[product.id]
                         : product.unitPriceCents / 100
-                      
+                      const staffColSpan = isStaffApparelSection ? 8 : 5
+
                       return (
-                        <tr key={product.id} className="hover:bg-blue-50">
+                        <Fragment key={product.id}>
+                        <tr className="hover:bg-blue-50">
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
                             {product.name}
                           </td>
@@ -1222,15 +1379,126 @@ export default function CatalogPage() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-center">
-                            <button
-                              onClick={() => handleDeleteProduct(product.id)}
-                              className="px-2 py-1 text-[#0066CC] hover:text-[#0052A3] text-xs font-bold transition"
-                              title="Delete product"
-                            >
-                              🗑️
-                            </button>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              {isStaffApparelSection ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    uniformEditingId === product.id
+                                      ? setUniformEditingId(null)
+                                      : openUniformEdit(product)
+                                  }
+                                  className="px-2 py-1 text-[#0066CC] hover:text-[#0052A3] text-xs font-bold transition"
+                                  title="Edit sizes, colors, and style"
+                                >
+                                  {uniformEditingId === product.id ? 'Close' : 'Edit uniform'}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="px-2 py-1 text-[#0066CC] hover:text-[#0052A3] text-xs font-bold transition"
+                                title="Delete product"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </td>
                         </tr>
+                        {isStaffApparelSection && uniformEditingId === product.id ? (
+                          <tr className="bg-blue-50 border-t border-blue-100">
+                            <td colSpan={staffColSpan} className="px-4 py-4">
+                              <p className="text-sm font-semibold text-[#0066CC] mb-3">
+                                Edit uniform options
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                    Sizes (comma-separated) *
+                                  </label>
+                                  <textarea
+                                    rows={3}
+                                    value={uniformDraft.sizesText}
+                                    onChange={(e) =>
+                                      setUniformDraft({ ...uniformDraft, sizesText: e.target.value })
+                                    }
+                                    className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                    Style *
+                                  </label>
+                                  <select
+                                    value={uniformDraft.style}
+                                    onChange={(e) =>
+                                      setUniformDraft({
+                                        ...uniformDraft,
+                                        style: e.target.value as UniformStyle,
+                                      })
+                                    }
+                                    className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                                  >
+                                    <option value="Unisex">Unisex</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                    Base unit price ($) *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={uniformDraft.unitPriceDollars}
+                                    onChange={(e) =>
+                                      setUniformDraft({
+                                        ...uniformDraft,
+                                        unitPriceDollars: e.target.value,
+                                      })
+                                    }
+                                    className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                                  />
+                                  <p className="mt-1 text-xs text-gray-600">
+                                    Applies to every size; use inline ✏️ on the row for quick price edits
+                                    if you prefer.
+                                  </p>
+                                </div>
+                                <div className="md:col-span-2 lg:col-span-4">
+                                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                                    Colors (comma-separated) *
+                                  </label>
+                                  <textarea
+                                    rows={2}
+                                    value={uniformDraft.colorsText}
+                                    onChange={(e) =>
+                                      setUniformDraft({ ...uniformDraft, colorsText: e.target.value })
+                                    }
+                                    className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                                  />
+                                </div>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveUniform(product.id)}
+                                  disabled={savingUniform}
+                                  className="bg-[#0066CC] hover:bg-[#0052A3] disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg text-sm transition"
+                                >
+                                  {savingUniform ? 'Saving…' : 'Save uniform'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setUniformEditingId(null)}
+                                  className="bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-4 rounded-lg text-sm transition"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                        </Fragment>
                       )
                     })}
                   </tbody>
