@@ -5,6 +5,7 @@ import {
   isCatalogGroup,
 } from '@/lib/catalog-order-forms'
 import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import { formatPrismaError, logApiError } from '@/lib/api-prisma-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,9 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category')
     const search = searchParams.get('search')
     const activeOnly = searchParams.get('activeOnly') !== 'false'
-    const uniformsOnly = searchParams.get('uniformsOnly') === 'true'
+    const uniformsOnly =
+      searchParams.get('uniformsOnly') === 'true' ||
+      searchParams.get('includeUniforms') === 'true'
     const excludeUniforms = searchParams.get('excludeUniforms') === 'true'
 
     const where: any = {}
@@ -97,8 +100,8 @@ export async function GET(request: NextRequest) {
       where.AND = conditions
     }
 
-    console.log('Fetching products with where clause:', JSON.stringify(where, null, 2))
-    
+    console.log('[api/products] GET where:', JSON.stringify(where, null, 2))
+
     const products = await prisma.product.findMany({
       where,
       orderBy: [
@@ -107,18 +110,17 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    console.log(`Found ${products.length} products`)
+    console.log(`[api/products] GET ok, count=${products.length}`)
     return NextResponse.json(products)
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error('Error fetching products:', error)
+    logApiError('api/products', 'GET', error)
     return NextResponse.json(
       {
         error: 'Failed to fetch products',
-        details: message,
+        details: formatPrismaError(error),
         code: 'PRODUCTS_QUERY_FAILED',
       },
-      { status: 503 }
+      { status: 500 }
     )
   }
 }
@@ -164,8 +166,11 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(product, { status: 201 })
-  } catch (error) {
-    console.error('Error creating product:', error)
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+  } catch (error: unknown) {
+    logApiError('api/products', 'POST', error)
+    return NextResponse.json(
+      { error: 'Failed to create product', details: formatPrismaError(error) },
+      { status: 500 }
+    )
   }
 }

@@ -20,8 +20,8 @@ export async function fetchProductsFromApi<T = unknown>(url: string): Promise<Fe
     if (!res.ok) {
       const body = payload as { error?: string; details?: string }
       const msg =
-        (typeof body.error === 'string' && body.error) ||
         (typeof body.details === 'string' && body.details) ||
+        (typeof body.error === 'string' && body.error) ||
         `Failed to load products (${res.status})`
       return { products: [], error: msg }
     }
@@ -54,8 +54,8 @@ export async function fetchJsonArrayFromApi<T = unknown>(url: string): Promise<{
     if (!res.ok) {
       const body = payload as { error?: string; details?: string }
       const msg =
-        (typeof body.error === 'string' && body.error) ||
         (typeof body.details === 'string' && body.details) ||
+        (typeof body.error === 'string' && body.error) ||
         `Request failed (${res.status})`
       return { items: [], error: msg }
     }

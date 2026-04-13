@@ -53,6 +53,12 @@ Keep these strings private. You will paste them into Vercel in the next step.
 - **Your computer** (`.env`): for seeding and `npm run dev`, you may set both `DATABASE_URL` and `DIRECT_URL` to the **direct** `db.…:5432` URI so you avoid pooler issues.  
 - **Vercel**: `DATABASE_URL` **must** be the **pooled** `6543` URI for the live site to connect reliably.
 
+**Migrations, seed, and empty data**
+
+- Run `npx prisma migrate deploy` before relying on the app; otherwise tables are missing and APIs will error.  
+- Run `npm run db:seed` (from your machine) if you want baseline stores and products.  
+- If the database is empty but connected, `/api/products` and `/api/stores` still return **`[]`** with HTTP **200**—they do not throw. **503/500 responses** from these routes almost always mean **Prisma could not connect** (wrong `DATABASE_URL` on Vercel, paused project, or network), not “no rows”.
+
 ---
 
 ## 4. Run Prisma migrations against Supabase

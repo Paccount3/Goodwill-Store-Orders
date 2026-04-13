@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { formatPrismaError, logApiError } from '@/lib/api-prisma-error'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
     const stores = await prisma.store.findMany({
       orderBy: [{ sortOrder: 'asc' }, { storeNumber: 'asc' }],
     })
+    console.log(`[api/stores] GET ok, count=${stores.length}`)
     return NextResponse.json(stores)
-  } catch (error) {
-    console.error('Error fetching stores:', error)
-    return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 })
+  } catch (error: unknown) {
+    logApiError('api/stores', 'GET', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch stores',
+        details: formatPrismaError(error),
+        code: 'STORES_QUERY_FAILED',
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -54,8 +65,11 @@ export async function POST(request: NextRequest) {
       },
     })
     return NextResponse.json(store)
-  } catch (error) {
-    console.error('Error creating store:', error)
-    return NextResponse.json({ error: 'Failed to create store' }, { status: 500 })
+  } catch (error: unknown) {
+    logApiError('api/stores', 'POST', error)
+    return NextResponse.json(
+      { error: 'Failed to create store', details: formatPrismaError(error) },
+      { status: 500 }
+    )
   }
 }
