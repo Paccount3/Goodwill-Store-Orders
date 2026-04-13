@@ -14,6 +14,7 @@ import {
 } from '@/lib/order-flow'
 import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
+import { verifyOrderSubmitPassword } from '@/lib/verify-order-submit-password'
 
 interface Store {
   id: number
@@ -197,8 +198,8 @@ export default function StoreMaintenanceOrderPage() {
   }
 
   const handleConfirmSubmit = async () => {
-    // Validate password
-    if (password !== 'BIGBLUE') {
+    const ok = await verifyOrderSubmitPassword(password)
+    if (!ok) {
       setPasswordError('Incorrect password')
       return
     }

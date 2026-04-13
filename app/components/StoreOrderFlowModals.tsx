@@ -32,7 +32,7 @@ export function ConfirmOrderModal({
 
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
-              <span className="text-xs text-gray-500">Temporary Password</span> BIGBLUE
+              Order submission password
             </label>
             <input
               type="password"

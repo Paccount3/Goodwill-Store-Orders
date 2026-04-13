@@ -162,7 +162,8 @@ Step-by-step instructions for non-developers: **[DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## Notes
 
-- **Admin access** uses the app’s existing password/cookie flow (see admin routes).
+- **Admin access** (`/admin-lock`, catalog, orders hub, order stats): password is checked server-side (`/api/admin/auth`). Set **`ADMIN_PASSWORD`** in `.env` / Vercel; otherwise a built-in default is used. An **httpOnly cookie** lasts **8 hours** after successful login.
+- **Order submission** (confirm modal on order forms): password is checked via **`/api/order-submit/verify`**. Set **`ORDER_SUBMIT_PASSWORD`** in `.env` / Vercel; if unset, defaults match the previous behavior. These secrets are **not** stored in the Postgres database (no Supabase Auth required for this MVP).
 - **Database** must be PostgreSQL for production-style hosting (e.g. Vercel + Supabase).
 - **Orders**: API capabilities match the codebase (e.g. delete where implemented).
 

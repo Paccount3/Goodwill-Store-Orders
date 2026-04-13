@@ -290,7 +290,7 @@ export default function OrderStatsPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Admin password must be entered on every page-open/refresh.
+  // Admin cookie persists ~8h; no forced re-login on each refresh.
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [data, setData] = useState<AggregatedData | null>(null)
@@ -328,7 +328,6 @@ export default function OrderStatsPage() {
         }
 
         setAdminGateLoading(false)
-        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
       } catch {
         if (cancelled) return
         const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''

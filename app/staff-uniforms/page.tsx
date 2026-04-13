@@ -13,6 +13,7 @@ import {
   orderSubmitErrorUserMessage,
 } from '@/lib/order-flow'
 import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
+import { verifyOrderSubmitPassword } from '@/lib/verify-order-submit-password'
 
 interface Store {
   id: number
@@ -194,8 +195,8 @@ export default function StaffUniformsPage() {
   }
 
   const handleConfirmSubmit = async () => {
-    // Validate password
-    if (password !== 'BIGBLUE') {
+    const ok = await verifyOrderSubmitPassword(password)
+    if (!ok) {
       setPasswordError('Incorrect password')
       return
     }

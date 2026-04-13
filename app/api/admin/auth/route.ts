@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const ADMIN_COOKIE_NAME = 'admin_authed'
-const ADMIN_PASSWORD = 'BigBlueAdmin1!'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'BigBlueAdmin1!'
 
 export async function POST(req: Request) {
   let body: any = null

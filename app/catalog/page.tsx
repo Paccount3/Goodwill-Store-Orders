@@ -286,7 +286,7 @@ export default function CatalogPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Admin password must be entered on every page-open/refresh.
+  // Admin password: cookie lasts 8h after /admin-lock; no forced re-login on every refresh.
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [products, setProducts] = useState<Product[]>([])
@@ -324,7 +324,6 @@ export default function CatalogPage() {
         }
 
         setAdminGateLoading(false)
-        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
       } catch {
         if (cancelled) return
         const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''

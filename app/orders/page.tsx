@@ -49,9 +49,7 @@ export default function OrdersHubPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Admin password must be entered on every page-open/refresh.
-  // We verify via `/api/admin/status` and then immediately clear the cookie
-  // so the next refresh forces another password prompt.
+  // Admin cookie persists ~8h after login; no forced re-prompt on every navigation/refresh.
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [orders, setOrders] = useState<Order[]>([])
@@ -92,7 +90,6 @@ export default function OrdersHubPage() {
 
         // Verified: allow this page load, then consume the auth token.
         setAdminGateLoading(false)
-        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
       } catch {
         if (cancelled) return
         const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
