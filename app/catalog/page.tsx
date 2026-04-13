@@ -9,6 +9,7 @@ import {
   ORDER_FORM_DB_CATEGORY_ORDER,
   DB_CATEGORY_SECTION_LABEL,
 } from '@/lib/catalog-order-forms'
+import { fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Product {
   id: number
@@ -289,6 +290,7 @@ export default function CatalogPage() {
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [products, setProducts] = useState<Product[]>([])
+  const [productsError, setProductsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedCatalogGroup, setSelectedCatalogGroup] = useState('')
   const [search, setSearch] = useState('')
@@ -343,17 +345,23 @@ export default function CatalogPage() {
 
   const fetchProducts = async () => {
     setLoading(true)
+    setProductsError(null)
     try {
       const params = new URLSearchParams()
       if (selectedCatalogGroup) params.append('catalogGroup', selectedCatalogGroup)
       if (search) params.append('search', search)
       params.append('activeOnly', 'false') // Show all products for management
 
-      const res = await fetch(`/api/products?${params.toString()}`)
-      const data = await res.json()
-      setProducts(data)
+      const { products: list, error } = await fetchProductsFromApi<Product>(
+        `/api/products?${params.toString()}`
+      )
+      setProducts(list)
+      setProductsError(error)
+      if (error) console.error('Error fetching products:', error)
     } catch (error) {
       console.error('Error fetching products:', error)
+      setProducts([])
+      setProductsError('Failed to load products')
     } finally {
       setLoading(false)
     }
@@ -783,6 +791,18 @@ export default function CatalogPage() {
           </div>
         </div>
       </div>
+
+      {productsError ? (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Could not load products</p>
+          <p className="mt-1">{productsError}</p>
+          <p className="mt-2 text-xs text-amber-800">
+            If this is production, confirm Vercel uses the Supabase <strong>transaction pooler</strong>{' '}
+            (port 6543) for <code className="rounded bg-amber-100 px-1">DATABASE_URL</code>, not the
+            direct <code className="rounded bg-amber-100 px-1">db.…:5432</code> host.
+          </p>
+        </div>
+      ) : null}
 
       {/* Store Supply aggregate (flat list, no categories) */}
       {loading ? null : storeSupplyProducts.length > 0 && (

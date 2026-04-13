@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -127,23 +128,15 @@ export default function OrdersHubPage() {
   }
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setStores(data)
-    } catch (error) {
-      console.error('Error fetching stores:', error)
-    }
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setStores(items)
+    if (error) console.error('Error fetching stores:', error)
   }
 
   const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products')
-      const data = await res.json()
-      setProducts(data)
-    } catch (error) {
-      console.error('Error fetching products:', error)
-    }
+    const { products, error } = await fetchProductsFromApi<Product>('/api/products')
+    setProducts(products)
+    if (error) console.error('Error fetching products:', error)
   }
 
   const fetchOrders = async () => {

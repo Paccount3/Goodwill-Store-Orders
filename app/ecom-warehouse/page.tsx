@@ -12,6 +12,7 @@ import {
   isSuccessfulOrderResponse,
   orderSubmitErrorUserMessage,
 } from '@/lib/order-flow'
+import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -147,30 +148,22 @@ export default function EcomWarehousePage() {
   }, [stores, formData.storeId])
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setStores(data)
-    } catch (error) {
-      console.error('Error fetching stores:', error)
-    }
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setStores(items)
+    if (error) console.error('Error fetching stores:', error)
   }
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&category=Ecom Warehouse')
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error('API Error Response:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to fetch products')
-      }
-      const data = await res.json()
-      setProducts(Array.isArray(data) ? data : [])
-      setLoading(false)
-    } catch (error: any) {
+      const { products, error } = await fetchProductsFromApi<Product>(
+        '/api/products?activeOnly=true&category=Ecom Warehouse'
+      )
+      setProducts(products)
+      if (error) console.error('Error fetching products:', error)
+    } catch (error: unknown) {
       console.error('Error fetching products:', error)
-      console.error('Error details:', error.message)
       setProducts([])
+    } finally {
       setLoading(false)
     }
   }

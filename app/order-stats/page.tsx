@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { fetchJsonArrayFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -353,22 +354,19 @@ export default function OrderStatsPage() {
   }, [selectedYear, selectedMonth, selectedCategory, selectedStoreIds, adminGateLoading])
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setAllStores(data)
-      // Initialize with all stores selected only if not a non-store category
-      if (
-        selectedCategory !== 'ADC Supply' &&
-        selectedCategory !== 'ADC Maintenance' &&
-        selectedCategory !== STORE_MAINTENANCE_ORDER_CATEGORY &&
-        selectedCategory !== 'Ebooks Maintenance' &&
-        selectedCategory !== 'Ecomm Maintenance'
-      ) {
-        setSelectedStoreIds(data.map((store: Store) => store.id))
-      }
-    } catch (error) {
-      console.error('Error fetching stores:', error)
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setAllStores(items)
+    if (error) console.error('Error fetching stores:', error)
+    // Initialize with all stores selected only if not a non-store category
+    if (
+      items.length > 0 &&
+      selectedCategory !== 'ADC Supply' &&
+      selectedCategory !== 'ADC Maintenance' &&
+      selectedCategory !== STORE_MAINTENANCE_ORDER_CATEGORY &&
+      selectedCategory !== 'Ebooks Maintenance' &&
+      selectedCategory !== 'Ecomm Maintenance'
+    ) {
+      setSelectedStoreIds(items.map((store) => store.id))
     }
   }
 

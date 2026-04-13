@@ -12,6 +12,7 @@ import {
   isSuccessfulOrderResponse,
   orderSubmitErrorUserMessage,
 } from '@/lib/order-flow'
+import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -105,31 +106,22 @@ export default function ADCMaintenancePage() {
   }, [products])
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setStores(data)
-    } catch (error) {
-      console.error('Error fetching stores:', error)
-    }
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setStores(items)
+    if (error) console.error('Error fetching stores:', error)
   }
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&category=ADC Maintenance')
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error('API Error Response:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to fetch products')
-      }
-      const data = await res.json()
-      // Ensure data is an array
-      setProducts(Array.isArray(data) ? data : [])
-      setLoading(false)
-    } catch (error: any) {
+      const { products, error } = await fetchProductsFromApi<Product>(
+        '/api/products?activeOnly=true&category=ADC Maintenance'
+      )
+      setProducts(products)
+      if (error) console.error('Error fetching products:', error)
+    } catch (error: unknown) {
       console.error('Error fetching products:', error)
-      console.error('Error details:', error.message)
-      setProducts([]) // Set to empty array on error
+      setProducts([])
+    } finally {
       setLoading(false)
     }
   }

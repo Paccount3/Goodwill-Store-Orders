@@ -109,12 +109,16 @@ export async function GET(request: NextRequest) {
 
     console.log(`Found ${products.length} products`)
     return NextResponse.json(products)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error('Error fetching products:', error)
-    console.error('Error stack:', error?.stack)
     return NextResponse.json(
-      { error: 'Failed to fetch products', details: error?.message || String(error) },
-      { status: 500 }
+      {
+        error: 'Failed to fetch products',
+        details: message,
+        code: 'PRODUCTS_QUERY_FAILED',
+      },
+      { status: 503 }
     )
   }
 }

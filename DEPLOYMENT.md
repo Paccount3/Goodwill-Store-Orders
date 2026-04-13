@@ -35,10 +35,23 @@ Keep these strings private. You will paste them into Vercel in the next step.
 
    | Name | Value |
    |------|--------|
-   | `DATABASE_URL` | Pooled Postgres URI (from step 2) |
-   | `DIRECT_URL` | Direct Postgres URI (from step 2) |
+   | `DATABASE_URL` | **Transaction pooler** — Supavisor / PgBouncer, port **6543**, host `*.pooler.supabase.com`, query string must include `pgbouncer=true` (and often `connect_timeout=30`). **Do not** use `db.<project>.supabase.co:5432` here — Vercel’s runtime often cannot reach the direct host. |
+   | `DIRECT_URL` | **Direct** Postgres — `db.<project-ref>.supabase.co:5432` (or Supabase “Session” URI). Used for `prisma migrate deploy` during build/CLI, **not** for normal Prisma Client queries in the app. |
+
+   Example shapes (password must be **URL-encoded** if it contains special characters):
+
+   ```env
+   DATABASE_URL="postgresql://postgres.<project-ref>:ENCODED_PASSWORD@<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=30"
+   DIRECT_URL="postgresql://postgres:ENCODED_PASSWORD@db.<project-ref>.supabase.co:5432/postgres"
+   ```
 
 4. Apply them to **Production** (and **Preview** if you want preview deployments to use a database).
+5. **Redeploy** after changing variables so serverless functions pick up new values.
+
+**Local vs production**
+
+- **Your computer** (`.env`): for seeding and `npm run dev`, you may set both `DATABASE_URL` and `DIRECT_URL` to the **direct** `db.…:5432` URI so you avoid pooler issues.  
+- **Vercel**: `DATABASE_URL` **must** be the **pooled** `6543` URI for the live site to connect reliably.
 
 ---
 

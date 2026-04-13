@@ -13,6 +13,7 @@ import {
   orderSubmitErrorUserMessage,
 } from '@/lib/order-flow'
 import { STORE_MAINTENANCE_ORDER_CATEGORY } from '@/lib/product-categories'
+import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -106,33 +107,21 @@ export default function StoreMaintenanceOrderPage() {
   }, [products])
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setStores(data)
-    } catch (error) {
-      console.error('Error fetching stores:', error)
-    }
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setStores(items)
+    if (error) console.error('Error fetching stores:', error)
   }
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(
-        `/api/products?activeOnly=true&category=${encodeURIComponent(STORE_MAINTENANCE_ORDER_CATEGORY)}`
-      )
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error('API Error Response:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to fetch products')
-      }
-      const data = await res.json()
-      // Ensure data is an array
-      setProducts(Array.isArray(data) ? data : [])
-      setLoading(false)
-    } catch (error: any) {
+      const url = `/api/products?activeOnly=true&category=${encodeURIComponent(STORE_MAINTENANCE_ORDER_CATEGORY)}`
+      const { products, error } = await fetchProductsFromApi<Product>(url)
+      setProducts(products)
+      if (error) console.error('Error fetching products:', error)
+    } catch (error: unknown) {
       console.error('Error fetching products:', error)
-      console.error('Error details:', error.message)
-      setProducts([]) // Set to empty array on error
+      setProducts([])
+    } finally {
       setLoading(false)
     }
   }

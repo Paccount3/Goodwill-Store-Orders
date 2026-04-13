@@ -12,6 +12,7 @@ import {
   isSuccessfulOrderResponse,
   orderSubmitErrorUserMessage,
 } from '@/lib/order-flow'
+import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 
 interface Store {
   id: number
@@ -82,33 +83,22 @@ export default function StaffUniformsPage() {
   }, [])
 
   const fetchStores = async () => {
-    try {
-      const res = await fetch('/api/stores')
-      const data = await res.json()
-      setStores(data)
-    } catch (error) {
-      console.error('Error fetching stores:', error)
-    }
+    const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
+    setStores(items)
+    if (error) console.error('Error fetching stores:', error)
   }
 
   const fetchUniforms = async () => {
     try {
-      const res = await fetch('/api/products?activeOnly=true&uniformsOnly=true')
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        console.error('API Error Response:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to fetch uniforms')
-      }
-      const data = await res.json()
-      // Ensure data is an array
-      const uniformsArray = Array.isArray(data) ? data : []
-      console.log('Fetched uniforms:', uniformsArray.length, uniformsArray)
-      setUniforms(uniformsArray)
-      setLoading(false)
-    } catch (error: any) {
+      const { products, error } = await fetchProductsFromApi<UniformProduct>(
+        '/api/products?activeOnly=true&uniformsOnly=true'
+      )
+      if (error) console.error('Error fetching uniforms:', error)
+      setUniforms(products)
+    } catch (error: unknown) {
       console.error('Error fetching uniforms:', error)
-      console.error('Error details:', error.message)
-      setUniforms([]) // Set to empty array on error
+      setUniforms([])
+    } finally {
       setLoading(false)
     }
   }
