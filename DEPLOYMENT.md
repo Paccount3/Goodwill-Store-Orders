@@ -69,13 +69,32 @@ That runs `prisma migrate deploy`, then `prisma generate`, then `next build`. Us
 
 Seeding fills stores and products the first time. It is **not** meant to run on every deploy.
 
-From your computer (same env vars as above):
+`prisma db seed` runs your seed script using the **Prisma Client**, which connects with **`DATABASE_URL`** (see `prisma/schema.prisma`). It does **not** use `DIRECT_URL` for queries.
+
+**On your computer:** For seeding and other local Prisma commands, point **`DATABASE_URL`** at the **direct** Postgres host (`db.<project>.supabase.co`, port **5432**), same as **`DIRECT_URL`**. The **transaction pooler** (port **6543**) is intended for **Vercel/serverless** runtime, not for local scripts—using the pooler locally can cause **“Can’t reach … :6543”** or **`Circuit breaker open`** errors.
+
+Ensure the password in the URI is **URL-encoded** if it contains special characters.
+
+From your computer (with `.env` using direct `5432` URLs for local seeding):
 
 ```bash
+npx prisma generate
+npx prisma migrate status
 npm run db:seed
 ```
 
 Run this after migrations on a **new empty database**, or when your team intentionally wants to bootstrap catalog data. Do **not** add seeding to the Vercel “start” or “build” command for production unless you fully understand the implications.
+
+### If seed still fails (connection-path checks)
+
+Treat as a **connection** problem before changing application code:
+
+- Wrong or rotated database password
+- Password not **URL-encoded** in the connection string
+- **`DATABASE_URL` still pointing at the transaction pooler (6543)** for local seed — switch both env vars to **direct `db.…:5432`** for local use
+- Temporary Supabase pooler or database issue — wait a few minutes and retry; wake the project in the dashboard if it was paused
+- Incorrect host copied from Supabase (direct `db.` vs pooler hostname)
+- Network or IPv4 restrictions — try another network or Supabase’s **session pooler** guidance in their dashboard
 
 ---
 

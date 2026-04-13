@@ -6,9 +6,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
+  // Prisma Client (app + `prisma db seed`) reads this — use a reachable URL locally (see .env.example).
   url       = env("DATABASE_URL")
-  // Direct connection (Supabase: port 5432) for migrations. Pooled URL (6543) is fine for runtime.
+  // `prisma migrate deploy` / `migrate dev` use this when set (migrations bypass the pooler when configured).
   directUrl = env("DIRECT_URL")
 }
 

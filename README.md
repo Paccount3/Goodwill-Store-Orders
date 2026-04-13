@@ -37,10 +37,14 @@ This installs dependencies and runs `prisma generate` via `postinstall`.
 
 ### 2. Configure environment variables
 
-Copy `.env.example` to `.env` and fill in:
+Copy `.env.example` to `.env` and fill in **`DATABASE_URL`** and **`DIRECT_URL`**.
 
-- **`DATABASE_URL`** — Postgres connection string (pooled URI if you use PgBouncer, e.g. Supabase port 6543)
-- **`DIRECT_URL`** — Direct Postgres connection for migrations (e.g. Supabase port 5432). For a simple local Postgres with no pooler, use the **same** value as `DATABASE_URL`.
+**Local development (`npm run dev`, `npm run db:seed`, Prisma Studio)**  
+Use Supabase’s **direct** connection to `db.<project-ref>.supabase.co` on port **5432** for **both** variables (same string twice). The **transaction pooler** (port **6543**) is for **deployed** serverless runtimes (e.g. Vercel); using it locally often causes “can’t reach” or **circuit breaker** errors.  
+If your database password has special characters (`@`, `#`, `!`, etc.), it must be **URL-encoded** inside the connection string.
+
+**Production (Vercel)**  
+Set **`DATABASE_URL`** to the **pooled** URI (often port **6543**, `pgbouncer=true`) and **`DIRECT_URL`** to the **direct / session** URI on **5432**, as shown in the Supabase dashboard.
 
 ### 3. Create tables (migrations)
 
