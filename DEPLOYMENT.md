@@ -2,6 +2,15 @@
 
 This guide is for getting the app onto **Vercel** with a **Supabase** Postgres database so orders and catalog data survive deploys and restarts.
 
+## Environment files (local vs repository)
+
+| File | Purpose |
+|------|--------|
+| **`.env`** | **Real secrets** on your computer only. Created by copying `.env.example`. Listed in `.gitignore` — **do not commit**. |
+| **`.env.example`** | **Template only** — safe to commit. Shows variable **names** and example **shapes**; no real passwords. |
+
+Production secrets for Vercel belong in the **Vercel project → Settings → Environment Variables**, not in the Git repo.
+
 ---
 
 ## 1. Create a Supabase project
@@ -38,12 +47,16 @@ Keep these strings private. You will paste them into Vercel in the next step.
    | `DATABASE_URL` | **Transaction pooler** — Supavisor / PgBouncer, port **6543**, host `*.pooler.supabase.com`, query string must include `pgbouncer=true` (and often `connect_timeout=30`). **Do not** use `db.<project>.supabase.co:5432` here — Vercel’s runtime often cannot reach the direct host. |
    | `DIRECT_URL` | **Direct** Postgres — `db.<project-ref>.supabase.co:5432` (or Supabase “Session” URI). Used for `prisma migrate deploy` during build/CLI, **not** for normal Prisma Client queries in the app. |
 
+   **Required format:** each value must be a single connection string starting with **`postgresql://`** or **`postgres://`**. Prisma reads these verbatim from the environment — there is no custom parsing in this app.
+
    Example shapes (password must be **URL-encoded** if it contains special characters):
 
    ```env
    DATABASE_URL="postgresql://postgres.<project-ref>:ENCODED_PASSWORD@<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connect_timeout=30"
    DIRECT_URL="postgresql://postgres:ENCODED_PASSWORD@db.<project-ref>.supabase.co:5432/postgres"
    ```
+
+   Do **not** wrap the whole line in extra quotes when pasting into Vercel’s value field unless you intend those quotes to be part of the string (they usually should not be). Avoid leading/trailing spaces or line breaks inside the value.
 
 4. Apply them to **Production** (and **Preview** if you want preview deployments to use a database).
 5. **Redeploy** after changing variables so serverless functions pick up new values.
@@ -58,6 +71,16 @@ Keep these strings private. You will paste them into Vercel in the next step.
 - Run `npx prisma migrate deploy` before relying on the app; otherwise tables are missing and APIs will error.  
 - Run `npm run db:seed` (from your machine) if you want baseline stores and products.  
 - If the database is empty but connected, `/api/products` and `/api/stores` still return **`[]`** with HTTP **200**—they do not throw. **503/500 responses** from these routes almost always mean **Prisma could not connect** (wrong `DATABASE_URL` on Vercel, paused project, or network), not “no rows”.
+
+### Troubleshooting: “invalid URL: must start with postgresql:// or postgres://”
+
+If Prisma (or Vercel logs) says **`DATABASE_URL` is invalid** because it **does not start with `postgresql://` or `postgres://`**, then:
+
+- The variable is **missing** for that environment (Production vs Preview), or  
+- The value was **pasted incorrectly** (extra characters, only the password, missing scheme, or a line break in the middle), or  
+- The name is wrong (e.g. `DATABASE_URI` instead of `DATABASE_URL`).
+
+Fix: In Supabase, use **Copy** on the full URI, paste into Vercel’s **`DATABASE_URL`** field, save, and **redeploy**. Repeat for **`DIRECT_URL`** using the direct/session connection string.
 
 ---
 

@@ -37,7 +37,10 @@ This installs dependencies and runs `prisma generate` via `postinstall`.
 
 ### 2. Configure environment variables
 
-Copy `.env.example` to `.env` and fill in **`DATABASE_URL`** and **`DIRECT_URL`**.
+- **`.env.example`** — committed template only (no real secrets).  
+- **`.env`** — your real local secrets; copy from `.env.example`, fill in values, **never commit** (gitignored).
+
+Copy `.env.example` to `.env` and set **`DATABASE_URL`** and **`DIRECT_URL`**. Each must be a full Postgres URI starting with **`postgresql://`** or **`postgres://`** (same requirement on Vercel).
 
 **Local development (`npm run dev`, `npm run db:seed`, Prisma Studio)**  
 Use Supabase’s **direct** connection to `db.<project-ref>.supabase.co` on port **5432** for **both** variables (same string twice). The **transaction pooler** (port **6543**) is for **deployed** serverless runtimes (e.g. Vercel); using it locally often causes “can’t reach” or **circuit breaker** errors.  
