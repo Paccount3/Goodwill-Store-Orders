@@ -4,6 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "prisma db push --skip-generate --accept-data-loss || true; tsx prisma/seed.ts || true; npm start"
+    "startCommand": "npm start",
+    "preDeployCommand": "npx prisma migrate deploy"
   }
 }

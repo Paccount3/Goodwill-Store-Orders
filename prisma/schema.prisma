@@ -6,8 +6,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Direct connection (Supabase: port 5432) for migrations. Pooled URL (6543) is fine for runtime.
+  directUrl = env("DIRECT_URL")
 }
 
 model Store {

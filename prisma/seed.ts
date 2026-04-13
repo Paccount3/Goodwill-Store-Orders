@@ -3,6 +3,11 @@ import { STORE_MAINTENANCE_ORDER_CATEGORY } from '../lib/product-categories'
 
 const prisma = new PrismaClient()
 
+/**
+ * Manual bootstrap only — do not run from Vercel/Railway start hooks or deploy pipelines.
+ * Safe to run on a fresh database after `prisma migrate deploy`; on populated DB it only fills
+ * missing catalog slices (e.g. Ecom categories) and runs non-destructive migrations.
+ */
 /** Legacy DB category; renamed to STORE_MAINTENANCE_ORDER_CATEGORY in migrateStoreMaintenanceCategoryName. */
 const LEGACY_STORE_MAINTENANCE_CATEGORY = 'Housatonic Maintenance'
 
@@ -312,11 +317,7 @@ async function main() {
 
   console.log('Database is empty. Seeding initial data...')
 
-  // Clear existing data (should be empty, but just in case)
-  await prisma.orderLine.deleteMany().catch(() => {})
-  await prisma.order.deleteMany().catch(() => {})
-  await prisma.product.deleteMany().catch(() => {})
-  await prisma.store.deleteMany().catch(() => {})
+  // Tables should be empty after migrations; we do not delete here (avoids accidental wipes).
 
   // Seed Stores
   const stores = await prisma.store.createMany({

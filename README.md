@@ -1,6 +1,6 @@
 # Goodwill Store Order MVP
 
-A full-stack web application for managing store supply orders, replacing a spreadsheet-based workflow. Built with Next.js, TypeScript, Tailwind CSS, SQLite, and Prisma.
+A full-stack web application for managing store supply orders, replacing a spreadsheet-based workflow. Built with Next.js, TypeScript, Tailwind CSS, **PostgreSQL**, and Prisma.
 
 ## Features
 
@@ -15,7 +15,7 @@ A full-stack web application for managing store supply orders, replacing a sprea
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **Database**: SQLite
+- **Database**: PostgreSQL (local Docker, Supabase, or any Prisma-compatible host)
 - **ORM**: Prisma
 - **Runtime**: Node.js
 
@@ -23,6 +23,7 @@ A full-stack web application for managing store supply orders, replacing a sprea
 
 - Node.js 18+ installed
 - npm or yarn package manager
+- A **PostgreSQL** database (see `.env.example` for required connection variables)
 
 ## Setup Instructions
 
@@ -32,27 +33,38 @@ A full-stack web application for managing store supply orders, replacing a sprea
 npm install
 ```
 
-This will install all required dependencies including Next.js, Prisma, and Tailwind CSS.
+This installs dependencies and runs `prisma generate` via `postinstall`.
 
-### 2. Set Up Database
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env` and fill in:
+
+- **`DATABASE_URL`** — Postgres connection string (pooled URI if you use PgBouncer, e.g. Supabase port 6543)
+- **`DIRECT_URL`** — Direct Postgres connection for migrations (e.g. Supabase port 5432). For a simple local Postgres with no pooler, use the **same** value as `DATABASE_URL`.
+
+### 3. Create tables (migrations)
 
 ```bash
-npm run db:push
+npm run db:migrate
 ```
 
-This creates the SQLite database file and applies the Prisma schema.
+This runs `prisma migrate dev`, applies migrations in `prisma/migrations/`, and updates your database. Use this during **development** when you change the schema.
 
-### 3. Seed Database
+For a **production** database (e.g. Supabase), use:
+
+```bash
+npm run db:migrate:deploy
+```
+
+### 4. Seed database (optional, first-time / dev)
 
 ```bash
 npm run db:seed
 ```
 
-This populates the database with:
-- 15 stores (Hartford, New Haven, Stamford, etc.)
-- ~40 products across categories (Tags, Bags, Labels, Cleaning, Shipping, Office)
+Populates stores, products, and related catalog data. Intended for **first-time setup** or dev bootstrap—not for automated production deploys. See `prisma/seed.ts` and comments there.
 
-### 4. Start Development Server
+### 5. Start Development Server
 
 ```bash
 npm run dev
@@ -62,24 +74,27 @@ The application will be available at `http://localhost:3000`
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run db:push` - Push Prisma schema to database
-- `npm run db:seed` - Seed database with initial data
-- `npm run db:studio` - Open Prisma Studio (database GUI)
+- `npm run dev` — Start development server
+- `npm run build` — `prisma generate` + `next build` (no DB migration; safe for local builds without DB)
+- `npm run build:vercel` — `prisma migrate deploy` + `prisma generate` + `next build` (optional for Vercel when env vars are set at build time)
+- `npm start` — Start production server
+- `npm run db:migrate` — `prisma migrate dev` (development migrations)
+- `npm run db:migrate:deploy` — `prisma migrate deploy` (production / CI)
+- `npm run db:push` — `prisma db push` (prototyping only; prefer migrations for anything shared)
+- `npm run db:seed` — Run seed script (`prisma/seed.ts`)
+- `npm run db:setup` — Migrate dev + seed (local convenience)
+- `npm run db:studio` — Prisma Studio
+
+## Deployment (Vercel + Supabase)
+
+Step-by-step instructions for non-developers: **[DEPLOYMENT.md](./DEPLOYMENT.md)**
 
 ## Project Structure
 
 ```
 ├── app/
 │   ├── api/              # API routes
-│   │   ├── orders/       # Order endpoints
-│   │   ├── stores/       # Store endpoints
-│   │   └── products/     # Product endpoints
-│   ├── components/       # React components
 │   ├── orders/           # Order pages
-│   │   └── [id]/         # Order details & invoice
 │   ├── new-order/        # New order form
 │   ├── catalog/          # Product catalog
 │   └── layout.tsx        # Root layout
@@ -87,98 +102,75 @@ The application will be available at `http://localhost:3000`
 │   └── prisma.ts         # Prisma client instance
 ├── prisma/
 │   ├── schema.prisma     # Database schema
-│   └── seed.ts           # Seed script
+│   ├── migrations/       # SQL migrations (PostgreSQL)
+│   └── seed.ts           # Seed script (manual / first-time)
 └── README.md
 ```
 
 ## Data Model
 
 ### Stores
-- `id`: Integer (primary key)
-- `storeNumber`: String (unique, e.g., "01")
-- `name`: String (e.g., "Hartford Store")
+
+- `id`: Integer (primary key, autoincrement)
+- `storeNumber`: String (unique)
+- `name`: String
+- `sortOrder`: Integer
 
 ### Products
+
 - `id`: Integer (primary key)
-- `name`: String
-- `category`: String
-- `unitPriceCents`: Integer
-- `isActive`: Boolean
+- `name`, `category`, `unitPriceCents`, optional JSON text fields for uniforms, etc.
 
 ### Orders
+
 - `id`: Integer (primary key)
-- `storeId`: Integer (foreign key)
-- `managerName`: String
-- `createdAt`: DateTime
-- `orderDate`: DateTime
-- `subtotalCents`: Integer
-- `notes`: String (optional)
+- `storeId`: Foreign key to Store
+- `managerName`, `createdAt`, `orderDate`, `subtotalCents`, `notes`, `orderType`
 
 ### OrderLines
-- `id`: Integer (primary key)
-- `orderId`: Integer (foreign key)
-- `productId`: Integer (foreign key)
-- `productNameSnapshot`: String (historical snapshot)
-- `unitPriceCentsSnapshot`: Integer (historical snapshot)
-- `quantity`: Integer
-- `lineTotalCents`: Integer
+
+- Line items with snapshots of product name and price at order time
 
 ## Key Features
 
 ### Order Submission
+
 - Select store from dropdown
 - Enter manager name
 - Add multiple products with quantities
 - Real-time subtotal calculation
-- Validation for required fields and minimum quantities
 
 ### Orders Hub
-- Table view with sortable columns
-- Search by store name/number, manager, or order ID
-- Filters:
-  - Date range (order date)
-  - Store filter
-  - Product filter
-  - Subtotal range (min/max)
-- Insights panel:
-  - Total spend in date range
-  - Top store by spend
-  - Top product by quantity
-  - Outlier stores (orders > 2x average)
+
+- Sortable table, search, filters, insights panel
 
 ### Invoice Generation
-- One-click invoice generation from order details
-- Invoice number format: `INV-YYYYMM-000123`
-- Print-ready HTML layout
-- Download via browser print dialog (Save as PDF)
+
+- Print-ready HTML; save as PDF via browser print
 
 ## Acceptance Tests
 
-✅ Create an order with multiple items → saved → appears in Orders Hub immediately
-✅ Orders Hub filtering by store and date range works
-✅ Search by manager name works
-✅ Order details shows exact snapshot prices and totals
-✅ Generate invoice from an order works in one click (view + printable/downloadable)
+- Create an order with multiple items → saved → appears in Orders Hub
+- Filtering, search, invoice generation work end-to-end
 
 ## Notes
 
-- **No Authentication**: This is a dummy MVP without user authentication
-- **Local Database**: SQLite database file is stored in `prisma/dev.db`
-- **Append-Only Orders**: Orders cannot be edited or deleted (as per requirements)
-- **Invoice Format**: Invoices use print-friendly HTML that can be saved as PDF via browser print dialog
+- **Admin access** uses the app’s existing password/cookie flow (see admin routes).
+- **Database** must be PostgreSQL for production-style hosting (e.g. Vercel + Supabase).
+- **Orders**: API capabilities match the codebase (e.g. delete where implemented).
 
 ## Troubleshooting
 
-### Database Issues
-If you encounter database errors:
-1. Delete `prisma/dev.db` and `prisma/dev.db-journal`
-2. Run `npm run db:push` again
-3. Run `npm run db:seed` to repopulate data
+### Database connection errors
 
-### Port Already in Use
-If port 3000 is already in use:
-- Kill the process using port 3000, or
-- Set a different port: `PORT=3001 npm run dev`
+1. Confirm `DATABASE_URL` and `DIRECT_URL` in `.env` match your provider’s **pooled** vs **direct** URLs.
+2. Run `npx prisma migrate deploy` against the same database you use in production.
+
+### Starting from scratch locally
+
+1. Point `.env` at an empty Postgres database.
+2. Run `npm run db:migrate` (or `db:migrate:deploy`).
+3. Run `npm run db:seed` if you want demo stores and products.
 
 ## License
 
