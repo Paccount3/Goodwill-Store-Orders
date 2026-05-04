@@ -237,7 +237,13 @@ export default function EcomWarehouseMaintenancePage() {
   }
 
   const handleConfirmSubmit = async () => {
-    const ok = await verifyOrderSubmitPassword(password)
+    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
+    if (!storeIdToUse) {
+      alert('No stores available')
+      return
+    }
+
+    const ok = await verifyOrderSubmitPassword(password, storeIdToUse)
     if (!ok) {
       setPasswordError('Incorrect password')
       return
@@ -247,13 +253,6 @@ export default function EcomWarehouseMaintenancePage() {
     setShowConfirmModal(false)
     setSubmitting(true)
 
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
-      setSubmitting(false)
-      return
-    }
-
     const orderedItems = getOrderedItems()
 
     try {
@@ -262,6 +261,7 @@ export default function EcomWarehouseMaintenancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: storeIdToUse,
+          orderSubmitPassword: password,
           managerName: formData.managerName.trim(),
           orderDate: formData.orderDate,
           notes: formData.notes,

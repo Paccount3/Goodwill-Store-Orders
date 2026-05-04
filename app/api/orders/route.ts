@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isOrderSubmitPasswordValid } from '@/lib/order-submit-password-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,12 +116,31 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { storeId, managerName, orderDate, notes, orderType, lineItems } = body
+    const orderSubmitPassword =
+      typeof body.orderSubmitPassword === 'string' ? body.orderSubmitPassword : ''
 
     if (!storeId || !managerName || !lineItems || lineItems.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    const storeIdNum = parseInt(String(storeId), 10)
+    if (!Number.isFinite(storeIdNum) || storeIdNum < 1) {
+      return NextResponse.json({ error: 'Invalid store' }, { status: 400 })
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeIdNum },
+      select: { storeNumber: true },
+    })
+    if (!store) {
+      return NextResponse.json({ error: 'Store not found' }, { status: 400 })
+    }
+
+    if (!isOrderSubmitPasswordValid(store.storeNumber, orderSubmitPassword)) {
+      return NextResponse.json({ error: 'Invalid order password' }, { status: 401 })
     }
 
     // Calculate subtotal
@@ -200,7 +220,7 @@ export async function POST(request: NextRequest) {
     const order = await prisma.$transaction(async (tx) => {
       const createdOrder = await tx.order.create({
         data: {
-          storeId: parseInt(storeId),
+          storeId: storeIdNum,
           managerName,
           orderDate: todayUTC, // Always use today's date at UTC midnight
           notes: notes || null,

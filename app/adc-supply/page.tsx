@@ -196,7 +196,13 @@ export default function ADCSupplyPage() {
   }
 
   const handleConfirmSubmit = async () => {
-    const ok = await verifyOrderSubmitPassword(password)
+    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
+    if (!storeIdToUse) {
+      alert('No stores available')
+      return
+    }
+
+    const ok = await verifyOrderSubmitPassword(password, storeIdToUse)
     if (!ok) {
       setPasswordError('Incorrect password')
       return
@@ -206,14 +212,6 @@ export default function ADCSupplyPage() {
     setShowConfirmModal(false)
     setSubmitting(true)
 
-    // Use first store as default if storeId is not set
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
-      setSubmitting(false)
-      return
-    }
-
     const orderedItems = getOrderedItems()
 
     try {
@@ -222,6 +220,7 @@ export default function ADCSupplyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: storeIdToUse,
+          orderSubmitPassword: password,
           managerName: formData.managerName,
           orderDate: formData.orderDate,
           notes: formData.notes,

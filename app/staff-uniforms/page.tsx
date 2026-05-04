@@ -195,7 +195,7 @@ export default function StaffUniformsPage() {
   }
 
   const handleConfirmSubmit = async () => {
-    const ok = await verifyOrderSubmitPassword(password)
+    const ok = await verifyOrderSubmitPassword(password, formData.storeId)
     if (!ok) {
       setPasswordError('Incorrect password')
       return
@@ -211,6 +211,7 @@ export default function StaffUniformsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: formData.storeId,
+          orderSubmitPassword: password,
           managerName: formData.managerName,
           orderDate: formData.orderDate,
           notes: formData.notes,
