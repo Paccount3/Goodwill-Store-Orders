@@ -10,6 +10,7 @@ import {
   ECOMM_SUPPLY_ORDER_CATEGORY,
   ECOMM_MAINTENANCE_ORDER_CATEGORY,
 } from '../lib/product-categories'
+import { syncStaffApparelPriceSheetFromSeed } from '../lib/staff-apparel-price-sheet'
 
 const prisma = new PrismaClient()
 
@@ -127,21 +128,8 @@ async function ensureMissingExtraStores(prismaInstance: PrismaClient) {
   }
 }
 
-/** One placeholder per canonical category; Staff Apparel is a uniform row for `/staff-uniforms`. */
+/** One placeholder per non–Staff-Apparel form. Staff Apparel is synced from the GW price sheet separately. */
 async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
-  const uniformSizes = JSON.stringify(['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'])
-  const poloColors = JSON.stringify(['Navy Blue', 'Royal Blue', 'White'])
-  const shortPoloSizes = JSON.stringify({
-    XS: 1600,
-    S: 1600,
-    M: 1600,
-    L: 1600,
-    XL: 1600,
-    XXL: 1800,
-    '3XL': 2000,
-    '4XL': 2200,
-  })
-
   await prismaInstance.product.createMany({
     data: [
       {
@@ -203,22 +191,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
     ],
   })
 
-  await prismaInstance.product.create({
-    data: {
-      name: '[Placeholder] Staff Polo — replace in Item Catalog',
-      category: STAFF_APPAREL_CATEGORY,
-      unitPriceCents: 1600,
-      maxQuantity: 10,
-      isActive: true,
-      isUniform: true,
-      availableSizes: uniformSizes,
-      availableColors: poloColors,
-      style: 'Unisex',
-      sizePriceMap: shortPoloSizes,
-    },
-  })
-
-  console.log('Created 9 placeholder products (one per order form).')
+  console.log('Created 8 placeholder products (non–Staff-Apparel forms).')
 }
 
 async function main() {
@@ -239,6 +212,7 @@ async function main() {
     await seedMinimalPlaceholderCatalog(prisma)
     await migrateStoreSortOrder(prisma)
     await ensureMissingExtraStores(prisma)
+    await syncStaffApparelPriceSheetFromSeed(prisma)
     console.log('Seeding completed.')
     return
   }
@@ -247,6 +221,7 @@ async function main() {
   console.log(
     'Database already has data; skipped inserting catalog. Apply prisma migrations (e.g. trim to one product per category) and manage products in the Item Catalog.'
   )
+  await syncStaffApparelPriceSheetFromSeed(prisma)
 }
 
 main()

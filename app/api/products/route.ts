@@ -177,6 +177,17 @@ export async function POST(request: NextRequest) {
       sizeMapJson = sizePriceMap ? JSON.stringify(sizePriceMap) : null
     }
 
+    let storedUnitPriceCents = priceInCents
+    if (category === STAFF_APPAREL_CATEGORY && sizeMapJson) {
+      try {
+        const m = JSON.parse(sizeMapJson) as Record<string, number>
+        const min = Math.min(...Object.values(m).map((v) => Number(v)))
+        if (Number.isFinite(min)) storedUnitPriceCents = min
+      } catch {
+        // keep priceInCents
+      }
+    }
+
     const maxAgg = await prisma.product.aggregate({
       where: { category },
       _max: { sortOrder: true },
@@ -187,7 +198,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         category,
-        unitPriceCents: priceInCents,
+        unitPriceCents: storedUnitPriceCents,
         sortOrder: nextSortOrder,
         maxQuantity: parseInt(maxQuantity, 10),
         isActive: true,

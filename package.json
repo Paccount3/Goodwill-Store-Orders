@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:seed:staff": "tsx scripts/seed-staff-apparel-sync.ts",
     "db:setup": "prisma migrate dev && prisma db seed",
     "db:studio": "prisma studio",
     "studio": "tsx scripts/prisma-studio-server.ts",

@@ -14,6 +14,7 @@ import {
 } from '@/lib/order-flow'
 import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
 import { verifyOrderSubmitPassword } from '@/lib/verify-order-submit-password'
+import { minCentsFromSizePriceMap } from '@/lib/uniform-helpers'
 
 interface Store {
   id: number
@@ -26,12 +27,26 @@ interface UniformProduct {
   name: string
   category: string
   unitPriceCents: number
+  sortOrder?: number
   maxQuantity: number
   isActive: boolean
   availableSizes: string | null
   availableColors: string | null
   style: string | null
   sizePriceMap: string | null
+}
+
+function displayFromCents(uniform: UniformProduct): number {
+  if (uniform.sizePriceMap) {
+    try {
+      const m = JSON.parse(uniform.sizePriceMap) as Record<string, number>
+      const min = minCentsFromSizePriceMap(m)
+      if (min !== null) return min
+    } catch {
+      /* ignore */
+    }
+  }
+  return uniform.unitPriceCents
 }
 
 interface UniformOrderItem {
@@ -405,7 +420,12 @@ export default function StaffUniformsPage() {
                     <div key={category} className="border border-gray-200 rounded-lg p-4">
                       <h3 className="font-bold text-lg text-[#0066CC] mb-3">{category}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {categoryUniforms.map((uniform) => {
+                        {[...categoryUniforms]
+                          .sort(
+                            (a, b) =>
+                              (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
+                          )
+                          .map((uniform) => {
                           const sizes = uniform.availableSizes ? JSON.parse(uniform.availableSizes) : []
                           const colors = uniform.availableColors ? JSON.parse(uniform.availableColors) : []
                           const style = uniform.style || 'Unisex'
@@ -425,7 +445,7 @@ export default function StaffUniformsPage() {
                                 Sizes: {sizes.join(', ')}
                               </div>
                               <div className="text-sm font-bold text-[#0066CC] mt-2">
-                                From {formatCurrency(uniform.unitPriceCents)}
+                                From {formatCurrency(displayFromCents(uniform))}
                               </div>
                             </button>
                           )

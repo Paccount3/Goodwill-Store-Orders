@@ -162,6 +162,22 @@ export async function PATCH(
       )
     }
 
+    if (
+      mergedCategory === STAFF_APPAREL_CATEGORY &&
+      typeof updateData.sizePriceMap === 'string' &&
+      updateData.sizePriceMap
+    ) {
+      try {
+        const m = JSON.parse(updateData.sizePriceMap) as Record<string, number>
+        const vals = Object.values(m).map((v) => Number(v)).filter((v) => Number.isFinite(v))
+        if (vals.length) {
+          updateData.unitPriceCents = Math.min(...vals)
+        }
+      } catch {
+        // keep existing unit price if map JSON is invalid (should not happen after validation above)
+      }
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: updateData as any,
