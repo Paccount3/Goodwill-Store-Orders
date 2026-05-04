@@ -2,7 +2,7 @@
  * Order confirmation passwords (Vercel / local env). Not stored in the database.
  *
  * Per store: ORDER_SUBMIT_PASSWORD_STORE_<storeNumber> matches Store.storeNumber
- * (e.g. 01, 13, 21, OT). If unset or empty, falls back to ORDER_SUBMIT_PASSWORD, then BIGBLUE.
+ * (e.g. 01, 13 for OT, 21). If unset or empty, falls back to ORDER_SUBMIT_PASSWORD, then BIGBLUE.
  */
 export function orderSubmitPasswordEnvKey(storeNumber: string): string {
   return `ORDER_SUBMIT_PASSWORD_STORE_${storeNumber}`
