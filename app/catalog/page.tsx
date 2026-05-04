@@ -41,6 +41,7 @@ interface Product {
   name: string
   category: string
   unitPriceCents: number
+  sortOrder?: number
   maxQuantity: number
   isActive: boolean
   totalInStock?: number
@@ -333,6 +334,29 @@ export default function CatalogPage() {
     unitPriceDollars: '',
   })
   const [savingUniform, setSavingUniform] = useState(false)
+
+  const moveIdInList = (ids: number[], id: number, delta: -1 | 1): number[] => {
+    const idx = ids.indexOf(id)
+    if (idx < 0) return ids
+    const next = idx + delta
+    if (next < 0 || next >= ids.length) return ids
+    const copy = [...ids]
+    const [removed] = copy.splice(idx, 1)
+    copy.splice(next, 0, removed)
+    return copy
+  }
+
+  const saveOrder = async (orderedIds: number[]) => {
+    const res = await fetch('/api/products/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error((err as { error?: string }).error ?? 'Failed to reorder products')
+    }
+  }
 
   /** Ignore stale responses when filters change or multiple GETs overlap. */
   const productsFetchSeq = useRef(0)
@@ -714,12 +738,7 @@ export default function CatalogPage() {
 
   const storeSupplyProducts = products
     .filter((p) => storeSupplyCategories.has(p.category))
-    .sort((a, b) => {
-      const orderA = STORE_SUPPLY_DISPLAY_ORDER[a.name] ?? 9999
-      const orderB = STORE_SUPPLY_DISPLAY_ORDER[b.name] ?? 9999
-      if (orderA !== orderB) return orderA - orderB
-      return a.name.localeCompare(b.name)
-    })
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
 
   // Keep ADC / Store Maintenance / Ecom Warehouse (and any other) categories grouped as before
   const productsByCategory = products.reduce((acc, product) => {
@@ -733,42 +752,11 @@ export default function CatalogPage() {
     return acc
   }, {} as Record<string, Product[]>)
 
-  // Apply explicit ordering for Ecomm Supply to match the e-comm warehouse order form
-  if (productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]) {
-    productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[ECOMM_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
-      const orderA = ECOM_WAREHOUSE_DISPLAY_ORDER[a.name] ?? 9999
-      const orderB = ECOM_WAREHOUSE_DISPLAY_ORDER[b.name] ?? 9999
-      if (orderA !== orderB) return orderA - orderB
-      return a.name.localeCompare(b.name)
-    })
-  }
-
-  // Apply explicit ordering for Ebooks Supply to match the e-books order form
-  if (productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]) {
-    productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_SUPPLY_ORDER_CATEGORY]].sort((a, b) => {
-      const orderA = ECOM_EBOOKS_DISPLAY_ORDER[a.name] ?? 9999
-      const orderB = ECOM_EBOOKS_DISPLAY_ORDER[b.name] ?? 9999
-      if (orderA !== orderB) return orderA - orderB
-      return a.name.localeCompare(b.name)
-    })
-  }
-
-  if (productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]) {
-    productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[EBOOKS_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
-      const orderA = EBOOKS_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
-      const orderB = EBOOKS_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
-      if (orderA !== orderB) return orderA - orderB
-      return a.name.localeCompare(b.name)
-    })
-  }
-
-  if (productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]) {
-    productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY] = [...productsByCategory[ECOMM_MAINTENANCE_ORDER_CATEGORY]].sort((a, b) => {
-      const orderA = ECOMM_MAINTENANCE_DISPLAY_ORDER[a.name] ?? 9999
-      const orderB = ECOMM_MAINTENANCE_DISPLAY_ORDER[b.name] ?? 9999
-      if (orderA !== orderB) return orderA - orderB
-      return a.name.localeCompare(b.name)
-    })
+  // Ensure every category section is sorted by DB order (sortOrder) instead of alphabet.
+  for (const key of Object.keys(productsByCategory)) {
+    productsByCategory[key] = [...productsByCategory[key]].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
+    )
   }
 
   const formCategoryOrderMap = new Map<string, number>(
@@ -1151,13 +1139,52 @@ export default function CatalogPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-center">
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="px-2 py-1 text-[#0066CC] hover:text-[#0052A3] text-xs font-bold transition"
-                            title="Delete product"
-                          >
-                            🗑️
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              className="px-2 py-1 text-xs font-bold text-[#0066CC] hover:text-[#0052A3]"
+                              title="Move up"
+                              onClick={async () => {
+                                try {
+                                  const ids = storeSupplyProducts.map((p) => p.id)
+                                  const next = moveIdInList(ids, product.id, -1)
+                                  if (next === ids) return
+                                  await saveOrder(next)
+                                  await fetchProducts()
+                                } catch (e) {
+                                  alert(e instanceof Error ? e.message : 'Failed to reorder products')
+                                }
+                              }}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="px-2 py-1 text-xs font-bold text-[#0066CC] hover:text-[#0052A3]"
+                              title="Move down"
+                              onClick={async () => {
+                                try {
+                                  const ids = storeSupplyProducts.map((p) => p.id)
+                                  const next = moveIdInList(ids, product.id, 1)
+                                  if (next === ids) return
+                                  await saveOrder(next)
+                                  await fetchProducts()
+                                } catch (e) {
+                                  alert(e instanceof Error ? e.message : 'Failed to reorder products')
+                                }
+                              }}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(product.id)}
+                              className="px-2 py-1 text-[#0066CC] hover:text-[#0052A3] text-xs font-bold transition"
+                              title="Delete product"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -1380,6 +1407,42 @@ export default function CatalogPage() {
                           </td>
                           <td className="px-4 py-3 text-sm text-center">
                             <div className="flex flex-wrap items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                className="px-2 py-1 text-xs font-bold text-[#0066CC] hover:text-[#0052A3]"
+                                title="Move up"
+                                onClick={async () => {
+                                  try {
+                                    const ids = prods.map((p) => p.id)
+                                    const next = moveIdInList(ids, product.id, -1)
+                                    if (next === ids) return
+                                    await saveOrder(next)
+                                    await fetchProducts()
+                                  } catch (e) {
+                                    alert(e instanceof Error ? e.message : 'Failed to reorder products')
+                                  }
+                                }}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="px-2 py-1 text-xs font-bold text-[#0066CC] hover:text-[#0052A3]"
+                                title="Move down"
+                                onClick={async () => {
+                                  try {
+                                    const ids = prods.map((p) => p.id)
+                                    const next = moveIdInList(ids, product.id, 1)
+                                    if (next === ids) return
+                                    await saveOrder(next)
+                                    await fetchProducts()
+                                  } catch (e) {
+                                    alert(e instanceof Error ? e.message : 'Failed to reorder products')
+                                  }
+                                }}
+                              >
+                                ↓
+                              </button>
                               {isStaffApparelSection ? (
                                 <button
                                   type="button"

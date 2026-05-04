@@ -102,10 +102,7 @@ export async function GET(request: NextRequest) {
 
     const products = await prisma.product.findMany({
       where,
-      orderBy: [
-        { category: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
     })
 
     console.log(`[api/products] GET ok, count=${products.length}`)
@@ -180,11 +177,18 @@ export async function POST(request: NextRequest) {
       sizeMapJson = sizePriceMap ? JSON.stringify(sizePriceMap) : null
     }
 
+    const maxAgg = await prisma.product.aggregate({
+      where: { category },
+      _max: { sortOrder: true },
+    })
+    const nextSortOrder = (maxAgg._max.sortOrder ?? -1) + 1
+
     const product = await prisma.product.create({
       data: {
         name,
         category,
         unitPriceCents: priceInCents,
+        sortOrder: nextSortOrder,
         maxQuantity: parseInt(maxQuantity, 10),
         isActive: true,
         isUniform: finalIsUniform,

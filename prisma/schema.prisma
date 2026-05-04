@@ -26,6 +26,7 @@ model Product {
   name            String
   category        String
   unitPriceCents  Int
+  sortOrder       Int         @default(0)
   maxQuantity     Int          @default(5)
   totalInStock    Int          @default(100)
   isActive        Boolean     @default(true)

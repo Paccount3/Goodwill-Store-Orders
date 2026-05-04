@@ -12,6 +12,7 @@ export async function PATCH(
     const {
       unitPriceCents,
       maxQuantity,
+      sortOrder,
       totalInStock,
       availableSizes,
       availableColors,
@@ -40,6 +41,14 @@ export async function PATCH(
         )
       }
       updateData.maxQuantity = parseInt(String(maxQuantity), 10)
+    }
+
+    if (sortOrder !== undefined) {
+      const n = Number(sortOrder)
+      if (!Number.isInteger(n) || n < 0) {
+        return NextResponse.json({ error: 'Invalid sortOrder value' }, { status: 400 })
+      }
+      updateData.sortOrder = n
     }
 
     if (totalInStock !== undefined) {
