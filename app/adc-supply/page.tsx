@@ -79,13 +79,6 @@ export default function ADCSupplyPage() {
   }, [])
 
   useEffect(() => {
-    // Set default storeId to first store when stores are loaded
-    if (stores.length > 0 && !formData.storeId) {
-      setFormData(prev => ({ ...prev, storeId: stores[0].id.toString() }))
-    }
-  }, [stores])
-
-  useEffect(() => {
     // Initialize productOrders when products are loaded
     if (Array.isArray(products) && products.length > 0) {
       const initial: Record<number, ProductOrder> = {}
@@ -171,15 +164,8 @@ export default function ADCSupplyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.managerName) {
+    if (!formData.storeId || !formData.managerName) {
       alert('Please fill in all required fields')
-      return
-    }
-
-    // Use first store as default if storeId is not set
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
       return
     }
 
@@ -196,13 +182,7 @@ export default function ADCSupplyPage() {
   }
 
   const handleConfirmSubmit = async () => {
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
-      return
-    }
-
-    const ok = await verifyOrderSubmitPassword(password, storeIdToUse)
+    const ok = await verifyOrderSubmitPassword(password, formData.storeId)
     if (!ok) {
       setPasswordError('Incorrect password')
       return
@@ -219,7 +199,7 @@ export default function ADCSupplyPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storeId: storeIdToUse,
+          storeId: formData.storeId,
           orderSubmitPassword: password,
           managerName: formData.managerName,
           orderDate: formData.orderDate,
@@ -273,10 +253,8 @@ export default function ADCSupplyPage() {
   }
 
   const handleOrderAgain = () => {
-    // Reset form (keep default storeId)
-    const defaultStoreId = stores.length > 0 ? stores[0].id.toString() : ''
     setFormData({
-      storeId: defaultStoreId,
+      storeId: '',
       managerName: '',
       orderDate: getTodayLocalDate(),
       notes: '',
@@ -314,8 +292,10 @@ export default function ADCSupplyPage() {
 
   const orderSuccessMeta = useMemo(() => {
     if (!createdOrderId) return null
-    return { storeDisplay: '', orderTypeLabel: 'ADC Supply Order' as const }
-  }, [createdOrderId])
+    const st = stores.find((s) => s.id === Number(formData.storeId))
+    const storeDisplay = st ? `${st.storeNumber} - ${st.name}` : 'Unknown store'
+    return { storeDisplay, orderTypeLabel: 'ADC Supply Order' as const }
+  }, [createdOrderId, stores, formData.storeId])
 
   const productsByCategory = Array.isArray(products) ? products.reduce((acc, product) => {
     if (!acc[product.category]) {
@@ -343,14 +323,22 @@ export default function ADCSupplyPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-900 mb-1">
-                Order Type
+                Store Name <span className="text-red-600">*</span>
               </label>
               <select
-                disabled
-                value="ADC_S"
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
+                required
+                value={formData.storeId}
+                onChange={(e) =>
+                  setFormData({ ...formData, storeId: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
               >
-                <option value="ADC_S">ADC S</option>
+                <option value="" className="text-gray-600">Select a store</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id} className="text-gray-900">
+                    {store.storeNumber} - {store.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

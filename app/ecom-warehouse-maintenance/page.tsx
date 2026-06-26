@@ -151,10 +151,12 @@ export default function EcomWarehouseMaintenancePage() {
   }, [products])
 
   useEffect(() => {
-    if (stores.length > 0 && !formData.storeId) {
-      setFormData((prev) => ({ ...prev, storeId: stores[0].id.toString() }))
+    const preferred = stores.find((s) => s.name === 'Ecomm')
+    if (preferred && !formData.storeId) {
+      setFormData((prev) => ({ ...prev, storeId: preferred.id.toString() }))
     }
-  }, [stores, formData.storeId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stores])
 
   const fetchStores = async () => {
     const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
@@ -220,8 +222,8 @@ export default function EcomWarehouseMaintenancePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.managerName.trim()) {
-      alert('Please enter the manager name')
+    if (!formData.storeId || !formData.managerName.trim()) {
+      alert('Please fill in all required fields')
       return
     }
 
@@ -237,13 +239,7 @@ export default function EcomWarehouseMaintenancePage() {
   }
 
   const handleConfirmSubmit = async () => {
-    const storeIdToUse = formData.storeId || (stores.length > 0 ? stores[0].id.toString() : '')
-    if (!storeIdToUse) {
-      alert('No stores available')
-      return
-    }
-
-    const ok = await verifyOrderSubmitPassword(password, storeIdToUse)
+    const ok = await verifyOrderSubmitPassword(password, formData.storeId)
     if (!ok) {
       setPasswordError('Incorrect password')
       return
@@ -260,7 +256,7 @@ export default function EcomWarehouseMaintenancePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          storeId: storeIdToUse,
+          storeId: formData.storeId,
           orderSubmitPassword: password,
           managerName: formData.managerName.trim(),
           orderDate: formData.orderDate,
@@ -314,9 +310,9 @@ export default function EcomWarehouseMaintenancePage() {
   }
 
   const handleOrderAgain = () => {
-    const defaultStoreId = stores.length > 0 ? stores[0].id.toString() : ''
+    const preferred = stores.find((s) => s.name === 'Ecomm')
     setFormData({
-      storeId: defaultStoreId,
+      storeId: preferred ? preferred.id.toString() : '',
       managerName: '',
       orderDate: getTodayLocalDate(),
       notes: '',
@@ -353,8 +349,10 @@ export default function EcomWarehouseMaintenancePage() {
 
   const orderSuccessMeta = useMemo(() => {
     if (!createdOrderId) return null
-    return { storeDisplay: '', orderTypeLabel: 'Ecomm Maintenance Order' as const }
-  }, [createdOrderId])
+    const st = stores.find((s) => s.id === Number(formData.storeId))
+    const storeDisplay = st ? `${st.storeNumber} - ${st.name}` : 'Unknown store'
+    return { storeDisplay, orderTypeLabel: 'Ecomm Maintenance Order' as const }
+  }, [createdOrderId, stores, formData.storeId])
 
   const sortedProducts = Array.isArray(products)
     ? [...products].sort((a, b) => {
@@ -388,13 +386,23 @@ export default function EcomWarehouseMaintenancePage() {
         <div className="bg-white shadow rounded-lg p-3 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-900 mb-1">Order Type</label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">
+                Store Name <span className="text-red-600">*</span>
+              </label>
               <select
-                disabled
-                value="ECM"
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
+                required
+                value={formData.storeId}
+                onChange={(e) =>
+                  setFormData({ ...formData, storeId: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-[#0066CC] focus:border-[#0066CC]"
               >
-                <option value="ECM">Ecomm Maintenance</option>
+                <option value="" className="text-gray-600">Select a store</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id} className="text-gray-900">
+                    {store.storeNumber} - {store.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

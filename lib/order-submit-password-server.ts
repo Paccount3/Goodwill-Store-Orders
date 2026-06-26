@@ -16,6 +16,20 @@ export function resolveExpectedOrderSubmitPassword(storeNumber: string): string 
   return process.env.ORDER_SUBMIT_PASSWORD ?? 'BIGBLUE'
 }
 
+function resolveOrderSubmitBackupPassword(): string | undefined {
+  const backup = process.env.ORDER_SUBMIT_PASSWORD
+  return backup !== undefined && backup !== '' ? backup : undefined
+}
+
+function resolveAdminPassword(): string {
+  return process.env.ADMIN_PASSWORD ?? 'BigBlueAdmin1!'
+}
+
+/** Per-store password, plus universal backup (`ORDER_SUBMIT_PASSWORD`) and admin password. */
 export function isOrderSubmitPasswordValid(storeNumber: string, password: string): boolean {
-  return password === resolveExpectedOrderSubmitPassword(storeNumber)
+  if (password === resolveExpectedOrderSubmitPassword(storeNumber)) return true
+  const backup = resolveOrderSubmitBackupPassword()
+  if (backup && password === backup) return true
+  if (password === resolveAdminPassword()) return true
+  return false
 }

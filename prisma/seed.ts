@@ -54,6 +54,8 @@ const DEFAULT_EXTRA_STORES: { storeNumber: string; name: string }[] = [
   { storeNumber: '26', name: 'Ridgefield ADC' },
   { storeNumber: '27', name: 'Riverside ADC' },
   { storeNumber: '28', name: 'Hartford ADC' },
+  { storeNumber: '29', name: 'Ecomm' },
+  { storeNumber: '30', name: 'Ebooks' },
 ]
 
 async function migrateProductCategoryNames(prismaInstance: PrismaClient) {
