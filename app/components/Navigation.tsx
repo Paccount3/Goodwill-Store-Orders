@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import PasswordInput from '@/app/components/PasswordInput'
 
 export default function Navigation() {
   const pathname = usePathname()
@@ -259,16 +260,13 @@ export default function Navigation() {
                 <label className="block text-sm font-semibold text-gray-900">
                   Password
                 </label>
-                <input
+                <PasswordInput
                   value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  type="password"
-                  className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                  onChange={setAdminPassword}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') submitAdminPassword()
                   }}
                   placeholder="Enter admin password"
-                  autoComplete="current-password"
                   disabled={authSubmitting}
                 />
                 {adminPasswordError && (

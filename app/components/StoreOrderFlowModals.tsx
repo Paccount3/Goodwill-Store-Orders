@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { CONFIRM_ORDER_MODAL_BODY } from '@/lib/order-flow'
+import PasswordInput from '@/app/components/PasswordInput'
 
 type ConfirmModalProps = {
   open: boolean
@@ -34,12 +34,10 @@ export function ConfirmOrderModal({
             <label className="block text-sm font-semibold text-gray-900 mb-2 text-left">
               Order submission password
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
+              onChange={onPasswordChange}
               placeholder="Enter password"
-              className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onConfirm()
               }}
