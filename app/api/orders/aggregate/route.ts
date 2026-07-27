@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
-  isInsightsNonStoreCategory,
   ORDER_STATS_STORE_SUPPLY_UI,
   NSSO_EXCLUDED_CATEGORY_VALUES,
   dbCategoryValuesForStatsFilter,
-  canonicalProductCategory,
 } from '@/lib/product-categories'
 
 export const dynamic = 'force-dynamic'
@@ -56,36 +54,15 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const isNonStoreCategory = isInsightsNonStoreCategory(category)
+    const allStores = await prisma.store.findMany({
+      orderBy: { storeNumber: 'asc' },
+    })
 
-    // Get all stores and products for the table structure
-    let stores: Array<{ id: number; storeNumber: string; name: string }> = []
-    
-    if (isNonStoreCategory) {
-      const nonStoreDisplayName = category
-        ? canonicalProductCategory(category)
-        : 'Unknown'
-      stores = [{
-        id: -1, // Special ID for non-store categories
-        storeNumber: '',
-        name: nonStoreDisplayName,
-      }]
-    } else {
-      // For regular categories, get actual stores
-      const allStores = await prisma.store.findMany({
-        orderBy: { storeNumber: 'asc' },
-      })
-      
-      // Filter stores if storeIds provided
-      if (storeIds) {
-        const storeIdArray = storeIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-        if (storeIdArray.length > 0) {
-          stores = allStores.filter(store => storeIdArray.includes(store.id))
-        } else {
-          stores = allStores
-        }
-      } else {
-        stores = allStores
+    let stores = allStores
+    if (storeIds) {
+      const storeIdArray = storeIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+      if (storeIdArray.length > 0) {
+        stores = allStores.filter(store => storeIdArray.includes(store.id))
       }
     }
 
@@ -113,9 +90,7 @@ export async function GET(request: NextRequest) {
       order.orderLines.forEach((line) => {
         const productId = line.productId
         
-        // For non-store categories, aggregate all orders into a single "store" (-1)
-        // For regular categories, use the actual storeId
-        const storeId = isNonStoreCategory ? -1 : order.storeId
+        const storeId = order.storeId
         
         // Use orderQuantity (the quantity ordered), not currentQuantity
         const quantity = line.orderQuantity || (line as any).quantity || 0
@@ -137,11 +112,7 @@ export async function GET(request: NextRequest) {
       let total = 0
 
       const storeData = stores.map((store) => {
-        // For non-store categories, sum all quantities into the single store entry
-        // For regular categories, use the specific store quantity
-        const qty = isNonStoreCategory 
-          ? (storeQuantities[-1] || 0) // All orders aggregated into -1
-          : (storeQuantities[store.id] || 0)
+        const qty = storeQuantities[store.id] || 0
         total += qty
         return {
           storeId: store.id,

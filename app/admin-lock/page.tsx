@@ -10,7 +10,7 @@ export default function AdminLockPage() {
   const redirectToRaw = searchParams.get('redirectTo') || ''
 
   const redirectTo = useMemo(() => {
-    const allowedPrefixes = ['/catalog', '/orders', '/order-stats', '/store-management']
+    const allowedPrefixes = ['/catalog', '/orders', '/order-stats', '/store-management', '/vendor-management']
     const ok =
       redirectToRaw && allowedPrefixes.some((prefix) => redirectToRaw === prefix || redirectToRaw.startsWith(`${prefix}/`))
     return ok ? redirectToRaw : '/catalog'

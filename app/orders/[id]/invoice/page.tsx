@@ -214,13 +214,21 @@ export default function InvoicePage() {
         </Link>
         <div className="flex justify-end space-x-3">
           {!isEditing && (
-            <button
-              type="button"
-              onClick={handleStartEditing}
-              className="border border-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
-            >
-              Edit Invoice
-            </button>
+            <>
+              <Link
+                href={`/orders/${order.id}/invoice/vendor`}
+                className="border border-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
+              >
+                View Vendor Invoice
+              </Link>
+              <button
+                type="button"
+                onClick={handleStartEditing}
+                className="border border-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
+              >
+                Edit Invoice
+              </button>
+            </>
           )}
           {isEditing && (
             <>

@@ -2,42 +2,40 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { DEFAULT_VENDOR_NAME } from '@/lib/default-vendors'
+import VendorStatsSection from './VendorStatsSection'
 
-interface Store {
+interface Vendor {
   id: number
-  storeNumber: string
   name: string
   sortOrder?: number
 }
 
-export default function StoreManagementPage() {
+export default function VendorManagementPage() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const [adminGateLoading, setAdminGateLoading] = useState(true)
-
-  const [stores, setStores] = useState<Store[]>([])
+  const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [newStoreNumber, setNewStoreNumber] = useState('')
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editNumber, setEditNumber] = useState('')
   const [editName, setEditName] = useState('')
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [dragId, setDragId] = useState<number | null>(null)
 
-  const fetchStores = useCallback(async () => {
+  const fetchVendors = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/stores')
-      if (!res.ok) throw new Error('Failed to load stores')
+      const res = await fetch('/api/vendors')
+      if (!res.ok) throw new Error('Failed to load vendors')
       const data = await res.json()
-      setStores(Array.isArray(data) ? data : [])
+      setVendors(Array.isArray(data) ? data : [])
     } catch (e) {
       console.error(e)
-      alert('Could not load stores')
+      alert('Could not load vendors')
     } finally {
       setLoading(false)
     }
@@ -76,25 +74,25 @@ export default function StoreManagementPage() {
   }, [pathname, router, searchParams])
 
   useEffect(() => {
-    if (!adminGateLoading) fetchStores()
-  }, [fetchStores, adminGateLoading])
+    if (!adminGateLoading) fetchVendors()
+  }, [fetchVendors, adminGateLoading])
 
-  const persistOrder = async (ordered: Store[]) => {
+  const persistOrder = async (ordered: Vendor[]) => {
     setSaving(true)
     try {
-      const res = await fetch('/api/stores/reorder', {
+      const res = await fetch('/api/vendors/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderedIds: ordered.map((s) => s.id) }),
+        body: JSON.stringify({ orderedIds: ordered.map((v) => v.id) }),
       })
       const data = await res.json()
       if (!res.ok) {
         throw new Error(data.error || 'Failed to save order')
       }
-      setStores(ordered)
+      setVendors(ordered)
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to save order')
-      await fetchStores()
+      await fetchVendors()
     } finally {
       setSaving(false)
     }
@@ -124,13 +122,13 @@ export default function StoreManagementPage() {
       setDragId(null)
       return
     }
-    const fromIdx = stores.findIndex((s) => s.id === fromId)
-    const toIdx = stores.findIndex((s) => s.id === targetId)
+    const fromIdx = vendors.findIndex((v) => v.id === fromId)
+    const toIdx = vendors.findIndex((v) => v.id === targetId)
     if (fromIdx < 0 || toIdx < 0) {
       setDragId(null)
       return
     }
-    const next = [...stores]
+    const next = [...vendors]
     const [removed] = next.splice(fromIdx, 1)
     next.splice(toIdx, 0, removed)
     setDragId(null)
@@ -143,70 +141,61 @@ export default function StoreManagementPage() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newStoreNumber.trim() || !newName.trim()) {
-      alert('Enter both store number and name')
+    if (!newName.trim()) {
+      alert('Enter a vendor name')
       return
     }
     setSaving(true)
     try {
-      const res = await fetch('/api/stores', {
+      const res = await fetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeNumber: newStoreNumber.trim(),
-          name: newName.trim(),
-        }),
+        body: JSON.stringify({ name: newName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to add store')
+        throw new Error(data.error || 'Failed to add vendor')
       }
-      setNewStoreNumber('')
       setNewName('')
-      await fetchStores()
+      await fetchVendors()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to add store')
+      alert(err instanceof Error ? err.message : 'Failed to add vendor')
     } finally {
       setSaving(false)
     }
   }
 
-  const startEdit = (store: Store) => {
-    setEditingId(store.id)
-    setEditNumber(store.storeNumber)
-    setEditName(store.name)
+  const startEdit = (vendor: Vendor) => {
+    setEditingId(vendor.id)
+    setEditName(vendor.name)
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setEditNumber('')
     setEditName('')
   }
 
   const saveEdit = async () => {
     if (editingId == null) return
-    if (!editNumber.trim() || !editName.trim()) {
-      alert('Store number and name are required')
+    if (!editName.trim()) {
+      alert('Vendor name is required')
       return
     }
     setSaving(true)
     try {
-      const res = await fetch(`/api/stores/${editingId}`, {
+      const res = await fetch(`/api/vendors/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeNumber: editNumber.trim(),
-          name: editName.trim(),
-        }),
+        body: JSON.stringify({ name: editName.trim() }),
       })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to update store')
+        throw new Error(data.error || 'Failed to update vendor')
       }
       cancelEdit()
-      await fetchStores()
+      await fetchVendors()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update store')
+      alert(err instanceof Error ? err.message : 'Failed to update vendor')
     } finally {
       setSaving(false)
     }
@@ -216,15 +205,15 @@ export default function StoreManagementPage() {
     if (deleteId == null) return
     setSaving(true)
     try {
-      const res = await fetch(`/api/stores/${deleteId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/vendors/${deleteId}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete store')
+        throw new Error(data.error || 'Failed to delete vendor')
       }
       setDeleteId(null)
-      await fetchStores()
+      await fetchVendors()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to delete store')
+      alert(err instanceof Error ? err.message : 'Failed to delete vendor')
     } finally {
       setSaving(false)
     }
@@ -234,39 +223,36 @@ export default function StoreManagementPage() {
     return null
   }
 
+  const vendorIds = vendors.map((v) => v.id)
+  const vendorNamesById = Object.fromEntries(vendors.map((v) => [v.id, v.name]))
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold text-[#0066CC] mb-2">Store Management</h1>
-      <p className="text-sm text-gray-600 mb-6">
-        Add, edit, or remove stores. Drag the handle (⋮⋮) to change the order shown in
-        all store dropdowns. Order is 1, 2, 3… from top to bottom (not the internal database
-        ID).
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 vendor-management-page">
+      <h1 className="text-3xl font-bold text-[#0066CC] mb-2 print:hidden">Vendor Management</h1>
+      <p className="text-sm text-gray-600 mb-6 print:hidden">
+        Review vendor spend, then add, edit, or remove vendors. Drag the handle (⋮⋮) to change the
+        order shown in Item Catalog vendor dropdowns. Products assigned to a removed vendor are
+        reassigned to <strong>{DEFAULT_VENDOR_NAME}</strong>. The {DEFAULT_VENDOR_NAME} vendor
+        cannot be removed.
       </p>
 
+      <VendorStatsSection vendorIds={vendorIds} vendorNamesById={vendorNamesById} />
+
+      <div className="print:hidden">
       <form
         onSubmit={handleAdd}
         className="bg-white shadow rounded-lg p-4 border border-gray-200 mb-6"
       >
-        <h2 className="text-sm font-bold text-[#0066CC] mb-3">Add a store</h2>
+        <h2 className="text-sm font-bold text-[#0066CC] mb-3">Add a vendor</h2>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Store number</label>
-            <input
-              type="text"
-              value={newStoreNumber}
-              onChange={(e) => setNewStoreNumber(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
-              placeholder="e.g. 29"
-            />
-          </div>
-          <div className="flex-[2]">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Store name</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Vendor name</label>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
-              placeholder="Display name"
+              placeholder="e.g. Acme Supply Co."
             />
           </div>
           <button
@@ -274,14 +260,14 @@ export default function StoreManagementPage() {
             disabled={saving}
             className="px-4 py-2 bg-[#0066CC] text-white text-sm font-bold rounded-md hover:bg-[#0052A3] disabled:opacity-50"
           >
-            Add store
+            Add vendor
           </button>
         </div>
       </form>
 
       <div className="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-4 py-3 bg-[#E6F2FF] border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#0066CC]">All stores ({stores.length})</h2>
+          <h2 className="text-sm font-bold text-[#0066CC]">All vendors ({vendors.length})</h2>
         </div>
         {loading ? (
           <div className="p-8 text-center text-gray-600">Loading…</div>
@@ -297,10 +283,7 @@ export default function StoreManagementPage() {
                     Order
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-bold text-white uppercase">
-                    Store number
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-bold text-white uppercase">
-                    Name
+                    Vendor name
                   </th>
                   <th className="px-4 py-2 text-right text-xs font-bold text-white uppercase">
                     Actions
@@ -308,30 +291,22 @@ export default function StoreManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {stores.map((store, index) => (
+                {vendors.map((vendor, index) => (
                   <tr
-                    key={store.id}
-                    draggable={editingId !== store.id}
-                    onDragStart={(e) => handleDragStartRow(e, store.id)}
+                    key={vendor.id}
+                    draggable={editingId !== vendor.id}
+                    onDragStart={(e) => handleDragStartRow(e, vendor.id)}
                     onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, store.id)}
+                    onDrop={(e) => handleDrop(e, vendor.id)}
                     onDragEnd={handleDragEnd}
                     className={`hover:bg-blue-50 ${
-                      dragId === store.id ? 'opacity-60' : ''
-                    } ${editingId === store.id ? '' : 'cursor-move'}`}
+                      dragId === vendor.id ? 'opacity-60' : ''
+                    } ${editingId === vendor.id ? '' : 'cursor-move'}`}
                   >
-                    {editingId === store.id ? (
+                    {editingId === vendor.id ? (
                       <>
                         <td className="px-2 py-2 text-center text-gray-400 text-sm">—</td>
                         <td className="px-2 py-2 text-center text-sm text-gray-700">{index + 1}</td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={editNumber}
-                            onChange={(e) => setEditNumber(e.target.value)}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                          />
-                        </td>
                         <td className="px-4 py-2">
                           <input
                             type="text"
@@ -369,20 +344,25 @@ export default function StoreManagementPage() {
                         <td className="px-2 py-2 text-center text-sm font-medium text-gray-700">
                           {index + 1}
                         </td>
-                        <td className="px-4 py-2 text-sm font-medium text-gray-900">{store.storeNumber}</td>
-                        <td className="px-4 py-2 text-sm text-gray-900">{store.name}</td>
+                        <td className="px-4 py-2 text-sm text-gray-900">
+                          {vendor.name}
+                          {vendor.name === DEFAULT_VENDOR_NAME ? (
+                            <span className="ml-2 text-xs font-semibold text-gray-500">(default)</span>
+                          ) : null}
+                        </td>
                         <td className="px-4 py-2 text-right whitespace-nowrap">
                           <button
                             type="button"
-                            onClick={() => startEdit(store)}
+                            onClick={() => startEdit(vendor)}
                             className="text-sm font-semibold text-[#0066CC] hover:underline mr-3"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDeleteId(store.id)}
-                            className="text-sm font-semibold text-red-600 hover:underline"
+                            onClick={() => setDeleteId(vendor.id)}
+                            disabled={vendor.name === DEFAULT_VENDOR_NAME}
+                            className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Remove
                           </button>
@@ -396,13 +376,15 @@ export default function StoreManagementPage() {
           </div>
         )}
       </div>
+      </div>
 
       {deleteId != null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove store?</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove vendor?</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Stores with existing orders cannot be removed. This action cannot be undone.
+              Products using this vendor will be reassigned to {DEFAULT_VENDOR_NAME}. This action
+              cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button

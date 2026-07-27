@@ -47,7 +47,6 @@ export default function OrderDetailsPage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Admin password must be entered on every page-open/refresh.
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [order, setOrder] = useState<Order | null>(null)
@@ -71,7 +70,6 @@ export default function OrderDetailsPage() {
         }
 
         setAdminGateLoading(false)
-        fetch('/api/admin/clear', { method: 'POST' }).catch(() => {})
       } catch {
         if (cancelled) return
         const searchString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
@@ -142,17 +140,14 @@ export default function OrderDetailsPage() {
     })
   }
 
-  const generateInvoiceNumber = (orderId: number, orderDate: string) => {
-    const date = new Date(orderDate)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const orderNum = String(orderId).padStart(6, '0')
-    return `INV-${year}${month}-${orderNum}`
-  }
-
-  const handleGenerateInvoice = () => {
+  const handleGenerateItemInvoice = () => {
     if (!order) return
     router.push(`/orders/${order.id}/invoice`)
+  }
+
+  const handleGenerateVendorInvoice = () => {
+    if (!order) return
+    router.push(`/orders/${order.id}/invoice/vendor`)
   }
 
   const handlePrint = () => {
@@ -206,10 +201,16 @@ export default function OrderDetailsPage() {
               Print
             </button>
             <button
-              onClick={handleGenerateInvoice}
+              onClick={handleGenerateItemInvoice}
               className="bg-[#0066CC] hover:bg-[#0052A3] text-white font-bold py-2 px-4 rounded-lg transition shadow-md"
             >
-              Generate Invoice
+              Generate Item Invoice
+            </button>
+            <button
+              onClick={handleGenerateVendorInvoice}
+              className="bg-[#0052A3] hover:bg-[#003d7a] text-white font-bold py-2 px-4 rounded-lg transition shadow-md"
+            >
+              Generate Vendor Invoice
             </button>
           </div>
         </div>

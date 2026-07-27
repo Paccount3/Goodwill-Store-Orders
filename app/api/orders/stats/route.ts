@@ -113,21 +113,19 @@ export async function GET(request: NextRequest) {
       orderTypeCounts[displayType] = (orderTypeCounts[displayType] || 0) + 1
     })
 
-    // Get all stores (not just top 3) sorted by spend
-    const allStoreEntries = Object.entries(storeSpend)
-      .sort((a, b) => storeSpend[parseInt(b[0])] - storeSpend[parseInt(a[0])])
-    
-    const allStoreIds = allStoreEntries.map(([id]) => parseInt(id))
     const allStoresData = await prisma.store.findMany({
-      where: { id: { in: allStoreIds } },
+      orderBy: { storeNumber: 'asc' },
     })
-    
+
     const allStores = allStoresData
       .map((store) => ({
         ...store,
         spendCents: storeSpend[store.id] || 0,
       }))
-      .sort((a, b) => b.spendCents - a.spendCents)
+      .sort((a, b) => {
+        if (b.spendCents !== a.spendCents) return b.spendCents - a.spendCents
+        return a.storeNumber.localeCompare(b.storeNumber, undefined, { numeric: true })
+      })
 
     return NextResponse.json({
       totalSpendCents: totalSpendCents || 0,

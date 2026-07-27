@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { fetchJsonArrayFromApi, fetchProductsFromApi } from '@/lib/fetch-products-client'
+import {
+  ORDER_FLAG_COLORS,
+  OrderFlagColor,
+  FLAG_COLOR_STYLES,
+  FLAG_ICON_PATH,
+} from '@/lib/order-flag-colors'
 
 interface Store {
   id: number
@@ -33,6 +39,7 @@ interface Order {
   subtotalCents: number
   notes?: string
   orderType?: string
+  flagColor?: OrderFlagColor | null
   orderLines: OrderLine[]
 }
 
@@ -59,6 +66,9 @@ export default function OrdersHubPage() {
   const [loading, setLoading] = useState(true)
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [flaggingOrderId, setFlaggingOrderId] = useState<number | null>(null)
+  const [flagPickerOrderId, setFlagPickerOrderId] = useState<number | null>(null)
+  const [flagPickerPos, setFlagPickerPos] = useState<{ top: number; left: number } | null>(null)
 
   const [filters, setFilters] = useState({
     search: '',
@@ -67,6 +77,7 @@ export default function OrdersHubPage() {
     dateFrom: '',
     dateTo: '',
     orderType: '',
+    flaggedOnly: false,
     sortBy: 'createdAt',
     sortOrder: 'desc',
   })
@@ -88,7 +99,7 @@ export default function OrdersHubPage() {
           return
         }
 
-        // Verified: allow this page load, then consume the auth token.
+        // Verified: allow this page load (admin cookie persists for 8 hours).
         setAdminGateLoading(false)
       } catch {
         if (cancelled) return
@@ -120,6 +131,23 @@ export default function OrdersHubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, adminGateLoading])
 
+  useEffect(() => {
+    if (flagPickerOrderId === null) return
+
+    const closePicker = () => {
+      setFlagPickerOrderId(null)
+      setFlagPickerPos(null)
+    }
+    const timer = window.setTimeout(() => {
+      document.addEventListener('click', closePicker)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('click', closePicker)
+    }
+  }, [flagPickerOrderId])
+
   if (adminGateLoading) {
     return null
   }
@@ -149,11 +177,12 @@ export default function OrdersHubPage() {
       params.append('sortBy', filters.sortBy)
       params.append('sortOrder', filters.sortOrder)
 
-      const res = await fetch(`/api/orders?${params.toString()}`)
-      const data = await res.json()
-      setOrders(data)
+      const { items, error } = await fetchJsonArrayFromApi<Order>(`/api/orders?${params.toString()}`)
+      setOrders(items)
+      if (error) console.error('Error fetching orders:', error)
     } catch (error) {
       console.error('Error fetching orders:', error)
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -273,6 +302,59 @@ export default function OrdersHubPage() {
     setDeletingOrderId(null)
   }
 
+  const handleFlagButtonClick = (orderId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (flagPickerOrderId === orderId) {
+      setFlagPickerOrderId(null)
+      setFlagPickerPos(null)
+      return
+    }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setFlagPickerPos({ top: rect.bottom + 4, left: rect.left })
+    setFlagPickerOrderId(orderId)
+  }
+
+  const handleSetFlag = async (
+    orderId: number,
+    flagColor: OrderFlagColor | null,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation()
+    setFlagPickerOrderId(null)
+    setFlagPickerPos(null)
+    setFlaggingOrderId(orderId)
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flagColor }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to update flag')
+      }
+      const updated = await res.json()
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, flagColor: updated.flagColor } : o))
+      )
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to update flag')
+    } finally {
+      setFlaggingOrderId(null)
+    }
+  }
+
+  const orderList = Array.isArray(orders) ? orders : []
+  const flagPickerOrder = flagPickerOrderId
+    ? orderList.find((o) => o.id === flagPickerOrderId) ?? null
+    : null
+  const displayedOrders = filters.flaggedOnly
+    ? orderList.filter((o) => o.flagColor)
+    : [...orderList].sort((a, b) => {
+        if (!!a.flagColor === !!b.flagColor) return 0
+        return a.flagColor ? -1 : 1
+      })
+
   const formatDate = (dateString: string) => {
     // Parse the ISO date string directly to avoid timezone conversion
     // Dates are stored as UTC, so we extract the date part from the ISO string
@@ -315,55 +397,99 @@ export default function OrdersHubPage() {
 
       {/* Insights Section */}
       {stats && (
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-6 border border-gray-200">
-          <h2 className="text-xl font-bold text-[#0066CC] mb-4">Insights for Selection</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <div className="text-sm font-semibold text-gray-800 mb-2">Total Spend</div>
-              <div className="text-2xl font-bold text-[#0066CC]">
-                {formatCurrency(stats.totalSpendCents)}
+        <div className="bg-white shadow-lg rounded-lg mb-6 border border-gray-200 overflow-hidden">
+          <div className="px-5 py-2.5 bg-[#0066CC] border-b border-[#0052A3] flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-white">Insights for Selection</h2>
+            <Link
+              href="/order-stats"
+              className="text-xs font-semibold text-blue-100 hover:text-white hover:underline whitespace-nowrap"
+            >
+              Full insights →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-gray-200">
+            {/* Total Spend */}
+            <div className="p-4 md:py-4 flex items-center">
+              <div className="w-full rounded-lg bg-white border-2 border-[#0066CC] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-1">
+                  Total Spend
+                </p>
+                <p className="text-2xl font-bold text-[#0066CC] tabular-nums leading-none">
+                  {formatCurrency(stats.totalSpendCents)}
+                </p>
               </div>
             </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-800 mb-2">Top Spending Stores</div>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
+
+            {/* Top Spending Stores */}
+            <div className="p-4 md:py-4 border-t md:border-t-0 border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Top Spending Stores
+                </p>
                 {stats.allStores && stats.allStores.length > 0 ? (
-                  stats.allStores.map((store) => (
-                    <div key={store.id} className="text-xs">
-                      <span className="font-bold text-gray-900">
-                        {store.storeNumber} - {store.name}
+                  <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+                    {stats.allStores.length}
+                  </span>
+                ) : null}
+              </div>
+              <div className="max-h-32 overflow-y-auto pr-1 -mr-1 space-y-0.5">
+                {stats.allStores && stats.allStores.length > 0 ? (
+                  stats.allStores.map((store, index) => (
+                    <div
+                      key={store.id}
+                      className="flex items-center justify-between gap-2 rounded px-1.5 py-0.5 hover:bg-gray-50"
+                    >
+                      <span className="text-xs text-gray-800 truncate min-w-0">
+                        <span className="text-gray-400 font-medium tabular-nums mr-1.5">
+                          {index + 1}.
+                        </span>
+                        <span className="font-semibold">{store.storeNumber}</span>
+                        <span className="text-gray-500 font-normal"> · {store.name}</span>
                       </span>
-                      <span className="text-gray-600 ml-2">
+                      <span className="text-xs font-semibold text-[#0066CC] tabular-nums shrink-0">
                         {formatCurrency(store.spendCents)}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-gray-600">No data</div>
+                  <p className="text-xs text-gray-400 italic py-1">No data for current filters</p>
                 )}
               </div>
             </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-800 mb-2">Order Type Count</div>
-              <div className="space-y-1">
+
+            {/* Order Type Count */}
+            <div className="p-4 md:py-4 border-t md:border-t-0 border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  Order Type Count
+                </p>
+                {stats.orderTypeCounts && Object.keys(stats.orderTypeCounts).length > 0 ? (
+                  <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+                    {Object.keys(stats.orderTypeCounts).length}
+                  </span>
+                ) : null}
+              </div>
+              <div className="max-h-32 overflow-y-auto pr-1 -mr-1 space-y-0.5">
                 {stats.orderTypeCounts && Object.keys(stats.orderTypeCounts).length > 0 ? (
                   Object.entries(stats.orderTypeCounts)
                     .sort((a, b) => b[1] - a[1])
                     .map(([type, count]) => (
-                      <div key={type} className="text-xs">
-                        <span className="font-bold text-gray-900">
-                          {type} - {count}
+                      <div
+                        key={type}
+                        className="flex items-center justify-between gap-2 rounded px-1.5 py-0.5 hover:bg-gray-50"
+                      >
+                        <span className="text-xs font-semibold text-gray-800 truncate">{type}</span>
+                        <span className="inline-flex min-w-[1.75rem] justify-center rounded-full bg-[#0066CC] px-2 py-0.5 text-[11px] font-bold text-white tabular-nums shrink-0">
+                          {count}
                         </span>
                       </div>
                     ))
                 ) : (
-                  <div className="text-xs text-gray-600">No data</div>
+                  <p className="text-xs text-gray-400 italic py-1">No data for current filters</p>
                 )}
               </div>
             </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">For full insights, go to Order Stats</p>
           </div>
         </div>
       )}
@@ -473,7 +599,18 @@ export default function OrdersHubPage() {
               <option value="ECM" className="text-gray-900">Ecomm Maintenance</option>
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-4">
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={filters.flaggedOnly}
+                onChange={(e) =>
+                  setFilters({ ...filters, flaggedOnly: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300 text-[#0066CC] focus:ring-[#0066CC]"
+              />
+              <span className="text-sm font-semibold text-gray-900">Flagged only</span>
+            </label>
             <button
               onClick={() =>
                 setFilters({
@@ -483,11 +620,12 @@ export default function OrdersHubPage() {
                   dateFrom: '',
                   dateTo: '',
                   orderType: '',
+                  flaggedOnly: false,
                   sortBy: 'createdAt',
                   sortOrder: 'desc',
                 })
               }
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-4 rounded-lg transition"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold py-2 px-4 rounded-lg transition"
             >
               Clear Filters
             </button>
@@ -499,13 +637,16 @@ export default function OrdersHubPage() {
       <div className="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
         {loading ? (
           <div className="p-8 text-center text-gray-900 font-medium">Loading orders...</div>
-        ) : orders.length === 0 ? (
+        ) : displayedOrders.length === 0 ? (
           <div className="p-8 text-center text-gray-800 font-medium">No orders found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#0066CC]">
                 <tr>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-white uppercase w-12">
+                    Flag
+                  </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-bold text-white uppercase cursor-pointer hover:bg-[#0052A3] transition-colors"
                     onClick={() => handleSort('id')}
@@ -542,12 +683,53 @@ export default function OrdersHubPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
+                {displayedOrders.map((order) => {
+                  const flagHex = order.flagColor ? FLAG_COLOR_STYLES[order.flagColor].hex : null
+                  return (
                   <tr
                     key={order.id}
-                    className="hover:bg-blue-50 cursor-pointer transition-colors"
+                    className={`cursor-pointer transition-colors ${
+                      !order.flagColor ? 'hover:bg-blue-50' : ''
+                    }`}
+                    style={
+                      order.flagColor
+                        ? { backgroundColor: FLAG_COLOR_STYLES[order.flagColor].rowBg }
+                        : undefined
+                    }
                     onClick={() => router.push(`/orders/${order.id}`)}
                   >
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
+                      <button
+                        type="button"
+                        onClick={(e) => handleFlagButtonClick(order.id, e)}
+                        disabled={flaggingOrderId === order.id}
+                        title={
+                          order.flagColor
+                            ? `Flagged ${FLAG_COLOR_STYLES[order.flagColor].label}`
+                            : 'Set flag color'
+                        }
+                        className="p-1 rounded transition-colors disabled:opacity-50 hover:opacity-80"
+                        aria-label={
+                          order.flagColor
+                            ? `Change ${FLAG_COLOR_STYLES[order.flagColor].label} flag`
+                            : 'Set flag color'
+                        }
+                      >
+                        <svg
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill={flagHex ?? 'none'}
+                          stroke={flagHex ?? '#d1d5db'}
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d={FLAG_ICON_PATH}
+                          />
+                        </svg>
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                       #{order.id}
                     </td>
@@ -590,12 +772,65 @@ export default function OrdersHubPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* Flag color picker — fixed position to avoid table overflow clipping */}
+      {flagPickerOrder && flagPickerPos && (
+        <div
+          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2"
+          style={{ top: flagPickerPos.top, left: flagPickerPos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-xs font-semibold text-gray-500 px-1 pb-1.5 whitespace-nowrap">
+            Flag color
+          </div>
+          <div className="flex items-center gap-2">
+            {ORDER_FLAG_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={(e) => handleSetFlag(flagPickerOrder.id, color, e)}
+                disabled={flaggingOrderId === flagPickerOrder.id}
+                title={FLAG_COLOR_STYLES[color].label}
+                className={`p-1.5 rounded-md transition-colors hover:bg-gray-100 disabled:opacity-50 ${
+                  flagPickerOrder.flagColor === color ? 'ring-2 ring-offset-1 ring-gray-400' : ''
+                }`}
+                aria-label={`Flag ${FLAG_COLOR_STYLES[color].label}`}
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill={FLAG_COLOR_STYLES[color].hex}
+                  stroke={FLAG_COLOR_STYLES[color].hex}
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d={FLAG_ICON_PATH}
+                  />
+                </svg>
+              </button>
+            ))}
+          </div>
+          {flagPickerOrder.flagColor && (
+            <button
+              type="button"
+              onClick={(e) => handleSetFlag(flagPickerOrder.id, null, e)}
+              disabled={flaggingOrderId === flagPickerOrder.id}
+              className="mt-2 w-full text-xs font-semibold text-gray-600 hover:text-gray-900 py-1 rounded hover:bg-gray-50 disabled:opacity-50"
+            >
+              Clear flag
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

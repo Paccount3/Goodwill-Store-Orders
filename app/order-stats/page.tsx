@@ -12,7 +12,6 @@ import {
   ECOMM_SUPPLY_ORDER_CATEGORY,
   ECOMM_MAINTENANCE_ORDER_CATEGORY,
   ORDER_STATS_STORE_SUPPLY_UI,
-  isInsightsNonStoreCategory,
 } from '@/lib/product-categories'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { fetchJsonArrayFromApi } from '@/lib/fetch-products-client'
@@ -364,18 +363,13 @@ export default function OrderStatsPage() {
     const { items, error } = await fetchJsonArrayFromApi<Store>('/api/stores')
     setAllStores(items)
     if (error) console.error('Error fetching stores:', error)
-    // Initialize with all stores selected only if not a non-store category
-    if (items.length > 0 && !isInsightsNonStoreCategory(selectedCategory)) {
+    if (items.length > 0) {
       setSelectedStoreIds(items.map((store) => store.id))
     }
   }
 
   const fetchData = async () => {
-    // Check if this is a non-store category
-    const isNonStoreCat = isInsightsNonStoreCategory(selectedCategory)
-    
-    // Don't fetch if no stores are selected for non-store categories
-    if (!isNonStoreCat && selectedStoreIds.length === 0) {
+    if (selectedStoreIds.length === 0) {
       setData(null)
       setLoading(false)
       return
@@ -403,8 +397,6 @@ export default function OrderStatsPage() {
       setLoading(false)
     }
   }
-
-  const isNonStoreCategory = isInsightsNonStoreCategory(selectedCategory)
 
   const handleStoreToggle = (storeId: number) => {
     setSelectedStoreIds(prev => {
@@ -670,12 +662,7 @@ export default function OrderStatsPage() {
               value={selectedCategory}
               onChange={(e) => {
                 setSelectedCategory(e.target.value)
-                // Reset store filter when category changes
-                if (isInsightsNonStoreCategory(e.target.value)) {
-                  setSelectedStoreIds([])
-                } else {
-                  setSelectedStoreIds(allStores.map(store => store.id))
-                }
+                setSelectedStoreIds(allStores.map(store => store.id))
               }}
               className="border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
             >
@@ -690,57 +677,55 @@ export default function OrderStatsPage() {
               <option value={ECOMM_MAINTENANCE_ORDER_CATEGORY}>Ecomm Maintenance Order</option>
             </select>
           </div>
-          {!isNonStoreCategory && (
-            <div className="relative store-filter-container">
-              <label className="block text-sm font-semibold text-gray-900 mb-1">
-                Stores ({selectedStoreIds.length} selected)
-              </label>
-              <button
-                onClick={() => setShowStoreFilter(!showStoreFilter)}
-                className="border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC] min-w-[200px] text-left"
-              >
-                {selectedStoreIds.length === allStores.length 
-                  ? 'All Stores' 
-                  : `${selectedStoreIds.length} Store${selectedStoreIds.length !== 1 ? 's' : ''} Selected`}
-              </button>
-              {showStoreFilter && (
-                <div className="absolute z-50 mt-1 bg-white border-2 border-gray-300 rounded-md shadow-lg max-h-64 overflow-y-auto min-w-[200px]">
-                  <div className="p-2 border-b border-gray-200 flex gap-2">
-                    <button
-                      onClick={handleSelectAllStores}
-                      className="text-xs text-[#0066CC] hover:text-[#0052A3] font-semibold"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={handleDeselectAllStores}
-                      className="text-xs text-[#0066CC] hover:text-[#0052A3] font-semibold"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                  <div className="p-2">
-                    {allStores.map((store) => (
-                      <label
-                        key={store.id}
-                        className="flex items-center py-1 px-2 hover:bg-blue-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedStoreIds.includes(store.id)}
-                          onChange={() => handleStoreToggle(store.id)}
-                          className="mr-2 text-[#0066CC] focus:ring-[#0066CC]"
-                        />
-                        <span className="text-sm text-gray-900">
-                          {store.storeNumber} - {store.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+          <div className="relative store-filter-container">
+            <label className="block text-sm font-semibold text-gray-900 mb-1">
+              Stores ({selectedStoreIds.length} selected)
+            </label>
+            <button
+              onClick={() => setShowStoreFilter(!showStoreFilter)}
+              className="border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC] min-w-[200px] text-left"
+            >
+              {selectedStoreIds.length === allStores.length 
+                ? 'All Stores' 
+                : `${selectedStoreIds.length} Store${selectedStoreIds.length !== 1 ? 's' : ''} Selected`}
+            </button>
+            {showStoreFilter && (
+              <div className="absolute z-50 mt-1 bg-white border-2 border-gray-300 rounded-md shadow-lg max-h-64 overflow-y-auto min-w-[200px]">
+                <div className="p-2 border-b border-gray-200 flex gap-2">
+                  <button
+                    onClick={handleSelectAllStores}
+                    className="text-xs text-[#0066CC] hover:text-[#0052A3] font-semibold"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={handleDeselectAllStores}
+                    className="text-xs text-[#0066CC] hover:text-[#0052A3] font-semibold"
+                  >
+                    Deselect All
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="p-2">
+                  {allStores.map((store) => (
+                    <label
+                      key={store.id}
+                      className="flex items-center py-1 px-2 hover:bg-blue-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedStoreIds.includes(store.id)}
+                        onChange={() => handleStoreToggle(store.id)}
+                        className="mr-2 text-[#0066CC] focus:ring-[#0066CC]"
+                      />
+                      <span className="text-sm text-gray-900">
+                        {store.storeNumber} - {store.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1">
               Year
@@ -792,7 +777,7 @@ export default function OrderStatsPage() {
 
       {loading ? (
         <div className="text-center py-8 text-gray-900 font-medium">Loading stats...</div>
-      ) : !isNonStoreCategory && selectedStoreIds.length === 0 ? (
+      ) : selectedStoreIds.length === 0 ? (
         <div className="bg-white shadow-lg rounded-lg border border-gray-200 p-8">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-4">

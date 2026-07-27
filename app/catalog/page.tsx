@@ -17,14 +17,22 @@ import {
   uniformJsonArrayToCommaText,
 } from '@/lib/uniform-helpers'
 import { fetchProductsFromApi } from '@/lib/fetch-products-client'
+import { DEFAULT_VENDOR_NAME } from '@/lib/default-vendors'
 
 type UniformStyle = 'Unisex' | 'Men' | 'Women'
+
+interface Vendor {
+  id: number
+  name: string
+  sortOrder?: number
+}
 
 const NEW_PRODUCT_INITIAL = {
   name: '',
   category: '',
   unitPriceCents: '',
   maxQuantity: '',
+  vendorId: '',
   sizesText: 'XS, S, M, L, XL, XXL, 3XL, 4XL',
   colorsText: 'Navy Blue, Royal Blue, White',
   uniformStyle: 'Unisex' as UniformStyle,
@@ -51,6 +59,8 @@ interface Product {
   availableColors?: string | null
   style?: string | null
   sizePriceMap?: string | null
+  vendorId: number
+  vendor?: { id: number; name: string }
 }
 
 function formatUniformListField(raw: string | null | undefined): string {
@@ -80,6 +90,8 @@ export default function CatalogPage() {
   const [adminGateLoading, setAdminGateLoading] = useState(true)
 
   const [products, setProducts] = useState<Product[]>([])
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [defaultVendorId, setDefaultVendorId] = useState<number | null>(null)
   const [productsError, setProductsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedCatalogGroup, setSelectedCatalogGroup] = useState('')
@@ -159,8 +171,30 @@ export default function CatalogPage() {
   }, [pathname, router, searchParams])
 
   useEffect(() => {
-    if (!adminGateLoading) fetchProducts()
+    if (!adminGateLoading) {
+      fetchProducts()
+      fetchVendors()
+    }
   }, [selectedCatalogGroup, search, adminGateLoading])
+
+  const fetchVendors = async () => {
+    try {
+      const res = await fetch('/api/vendors')
+      if (!res.ok) throw new Error('Failed to load vendors')
+      const data = await res.json()
+      const list: Vendor[] = Array.isArray(data) ? data : []
+      setVendors(list)
+      const other = list.find((v) => v.name === DEFAULT_VENDOR_NAME)
+      if (other) {
+        setDefaultVendorId(other.id)
+        setNewProduct((prev) =>
+          prev.vendorId ? prev : { ...prev, vendorId: String(other.id) }
+        )
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error)
+    }
+  }
 
   const fetchProducts = async () => {
     const seq = ++productsFetchSeq.current
@@ -204,6 +238,50 @@ export default function CatalogPage() {
     const cleaned = value.replace(/[^0-9.]/g, '')
     return parseFloat(cleaned) || 0
   }
+
+  const handleVendorChange = async (productId: number, vendorId: number) => {
+    setSaving((prev) => ({ ...prev, [productId]: true }))
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorId }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Failed to update vendor')
+      }
+      const updated = (await res.json()) as Product
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? { ...p, vendorId: updated.vendorId, vendor: updated.vendor }
+            : p
+        )
+      )
+    } catch (error) {
+      console.error('Error updating vendor:', error)
+      alert(error instanceof Error ? error.message : 'Failed to update vendor')
+    } finally {
+      setSaving((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  const renderVendorSelect = (product: Product) => (
+    <select
+      value={product.vendorId ?? defaultVendorId ?? ''}
+      onChange={(e) => handleVendorChange(product.id, parseInt(e.target.value, 10))}
+      disabled={saving[product.id] || vendors.length === 0}
+      className="w-full min-w-[10rem] max-w-[16rem] border border-gray-300 rounded-md px-2 py-1 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] disabled:opacity-50"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {vendors.map((vendor) => (
+        <option key={vendor.id} value={vendor.id}>
+          {vendor.name}
+        </option>
+      ))}
+    </select>
+  )
 
   const handlePriceChange = (productId: number, value: string) => {
     const price = parseCurrency(value)
@@ -458,6 +536,9 @@ export default function CatalogPage() {
         category: newProduct.category,
         unitPriceCents: parseFloat(newProduct.unitPriceCents),
         maxQuantity: parseInt(newProduct.maxQuantity, 10),
+        vendorId: newProduct.vendorId
+          ? parseInt(newProduct.vendorId, 10)
+          : defaultVendorId,
       }
       if (isStaff) {
         const sizes = staffSizes
@@ -658,6 +739,22 @@ export default function CatalogPage() {
                 placeholder="1"
               />
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1">
+                Vendor
+              </label>
+              <select
+                value={newProduct.vendorId || (defaultVendorId != null ? String(defaultVendorId) : '')}
+                onChange={(e) => setNewProduct({ ...newProduct, vendorId: e.target.value })}
+                className="w-full border-2 border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-[#0066CC]"
+              >
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {newProduct.category === STAFF_APPAREL_CATEGORY && (
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -797,6 +894,9 @@ export default function CatalogPage() {
                     <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
                       Product Name
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
+                      Vendor
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase">
                       Unit Price
                     </th>
@@ -823,6 +923,7 @@ export default function CatalogPage() {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {product.name}
                         </td>
+                        <td className="px-4 py-3 text-sm">{renderVendorSelect(product)}</td>
                         <td className="px-4 py-3 text-sm text-right">
                           {isEditing ? (
                             <div className="flex items-center justify-end gap-2">
@@ -1036,6 +1137,9 @@ export default function CatalogPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
                         Product Name
                       </th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
+                        Vendor
+                      </th>
                       {isStaffApparelSection && (
                         <>
                           <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">
@@ -1069,7 +1173,7 @@ export default function CatalogPage() {
                       const currentPrice = isEditing
                         ? editingPrice[product.id]
                         : product.unitPriceCents / 100
-                      const staffColSpan = isStaffApparelSection ? 8 : 5
+                      const staffColSpan = isStaffApparelSection ? 9 : 6
 
                       return (
                         <Fragment key={product.id}>
@@ -1077,6 +1181,7 @@ export default function CatalogPage() {
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
                             {product.name}
                           </td>
+                          <td className="px-4 py-3 text-sm">{renderVendorSelect(product)}</td>
                           {isStaffApparelSection && (
                             <>
                               <td className="px-4 py-3 text-sm text-gray-800 max-w-[14rem]">

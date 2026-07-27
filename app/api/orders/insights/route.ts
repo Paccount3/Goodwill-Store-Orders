@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   STAFF_APPAREL_CATEGORY,
-  isInsightsNonStoreCategory,
   isNssoStoreSupplyStatsCategory,
   ORDER_STATS_STORE_SUPPLY_UI,
   productCategoryMatchesStatsFilter,
-  canonicalProductCategory,
 } from '@/lib/product-categories'
 
 export const dynamic = 'force-dynamic'
@@ -57,8 +55,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const isNonStoreCategory = isInsightsNonStoreCategory(category)
-
     // Filter orders by category if specified
     let filteredOrders = orders
     if (category) {
@@ -90,32 +86,18 @@ export async function GET(request: NextRequest) {
     // Calculate spend per store and order counts
     const storeSpend: Record<number, { storeId: number; storeName: string; spendCents: number; orderCount: number }> = {}
     
-    if (isNonStoreCategory) {
-      // For non-store categories, aggregate all into a single entry
-      const totalSpend = filteredOrders.reduce((sum, order) => sum + order.subtotalCents, 0)
-      const nonStoreDisplayName = category
-        ? canonicalProductCategory(category)
-        : 'Unknown'
-      storeSpend[-1] = {
-        storeId: -1,
-        storeName: nonStoreDisplayName,
-        spendCents: totalSpend,
-        orderCount: filteredOrders.length,
-      }
-    } else {
-      filteredOrders.forEach((order) => {
-        if (!storeSpend[order.storeId]) {
-          storeSpend[order.storeId] = {
-            storeId: order.storeId,
-            storeName: order.store.name,
-            spendCents: 0,
-            orderCount: 0,
-          }
+    filteredOrders.forEach((order) => {
+      if (!storeSpend[order.storeId]) {
+        storeSpend[order.storeId] = {
+          storeId: order.storeId,
+          storeName: order.store.name,
+          spendCents: 0,
+          orderCount: 0,
         }
-        storeSpend[order.storeId].spendCents += order.subtotalCents
-        storeSpend[order.storeId].orderCount += 1
-      })
-    }
+      }
+      storeSpend[order.storeId].spendCents += order.subtotalCents
+      storeSpend[order.storeId].orderCount += 1
+    })
 
     const spendPerStore = Object.values(storeSpend)
       .sort((a, b) => b.spendCents - a.spendCents)

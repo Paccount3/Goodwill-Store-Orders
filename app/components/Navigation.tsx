@@ -15,6 +15,8 @@ export default function Navigation() {
       { href: '/orders', label: 'Orders Hub' },
       { href: '/order-stats', label: 'Order Stats' },
       { href: '/store-management', label: 'Store Management' },
+      { href: '/vendor-management', label: 'Vendor Management' },
+      { href: '/announcement-management', label: 'Daily Announcement' },
     ],
     []
   )
@@ -46,7 +48,7 @@ export default function Navigation() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [pathname])
 
   const openAdminGate = () => {
     setAdminPasswordError('')
@@ -90,7 +92,7 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="bg-[#0066CC] shadow-lg w-full">
+    <nav className="bg-[#0066CC] shadow-lg w-full sticky top-0 z-[100]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: logo + main nav */}
@@ -110,7 +112,7 @@ export default function Navigation() {
                   Stores
                   <span className="ml-1 text-xs">▼</span>
                 </button>
-                <div className="absolute left-0 top-full mt-0 w-64 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-20">
+                <div className="absolute left-0 top-full mt-0 w-64 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-[110]">
                   <Link
                     href="/new-order"
                     className="block px-4 py-2 text-sm hover:bg-blue-50"
@@ -146,7 +148,7 @@ export default function Navigation() {
                   ADCs
                   <span className="ml-1 text-xs">▼</span>
                 </button>
-                <div className="absolute left-0 top-full mt-0 w-56 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-20">
+                <div className="absolute left-0 top-full mt-0 w-56 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-[110]">
                   <Link
                     href="/adc-supply"
                     className="block px-4 py-2 text-sm hover:bg-blue-50"
@@ -175,7 +177,7 @@ export default function Navigation() {
                   E-commerce
                   <span className="ml-1 text-xs">▼</span>
                 </button>
-                <div className="absolute left-0 top-full mt-0 w-64 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-20">
+                <div className="absolute left-0 top-full mt-0 w-64 rounded-md shadow-lg bg-white text-gray-800 hidden group-hover:block z-[110]">
                   <Link
                     href="/ecom-ebooks"
                     className="block px-4 py-2 text-sm hover:bg-blue-50"
@@ -213,7 +215,8 @@ export default function Navigation() {
                   isActive('/catalog') ||
                   isActive('/orders') ||
                   isActive('/order-stats') ||
-                  isActive('/store-management')
+                  isActive('/store-management') ||
+                  isActive('/vendor-management')
                     ? 'border-white text-white'
                     : 'border-transparent text-white hover:text-gray-200 hover:border-blue-200'
                 }`}
@@ -225,7 +228,7 @@ export default function Navigation() {
               </button>
 
               {adminMenuOpen && (
-                <div className="absolute right-0 top-full mt-0 w-56 rounded-md shadow-lg bg-white text-gray-800 z-20">
+                <div className="absolute right-0 top-full mt-0 w-56 rounded-md shadow-lg bg-white text-gray-800 z-[110]">
                   {adminLinks.map((l) => (
                     <Link
                       key={l.href}

@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import { STAFF_APPAREL_CATEGORY } from './product-categories'
+import { getDefaultVendorId } from './vendors-server'
 
 /** Canonical GW staff apparel rows (matches org price sheet). */
 export type StaffApparelSheetRow = {
@@ -169,8 +170,9 @@ function rowToCreateData(row: StaffApparelSheetRow) {
  * Does not delete other custom Staff Apparel products.
  */
 export async function syncStaffApparelPriceSheetFromSeed(prisma: PrismaClient): Promise<void> {
+  const defaultVendorId = await getDefaultVendorId()
   for (const row of STAFF_APPAREL_PRICE_SHEET_ROWS) {
-    const data = rowToCreateData(row)
+    const data = { ...rowToCreateData(row), vendorId: defaultVendorId }
     const existing = await prisma.product.findFirst({
       where: { category: STAFF_APPAREL_CATEGORY, name: row.name },
     })

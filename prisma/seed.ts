@@ -11,6 +11,11 @@ import {
   ECOMM_MAINTENANCE_ORDER_CATEGORY,
 } from '../lib/product-categories'
 import { syncStaffApparelPriceSheetFromSeed } from '../lib/staff-apparel-price-sheet'
+import { DEFAULT_VENDOR_NAMES, DEFAULT_VENDOR_NAME } from '../lib/default-vendors'
+import {
+  DAILY_ANNOUNCEMENT_ID,
+  DEFAULT_DAILY_ANNOUNCEMENT,
+} from '../lib/daily-announcement-defaults'
 
 const prisma = new PrismaClient()
 
@@ -130,8 +135,25 @@ async function ensureMissingExtraStores(prismaInstance: PrismaClient) {
   }
 }
 
+async function ensureDefaultVendors(prismaInstance: PrismaClient): Promise<number> {
+  for (let i = 0; i < DEFAULT_VENDOR_NAMES.length; i++) {
+    const name = DEFAULT_VENDOR_NAMES[i]
+    await prismaInstance.vendor.upsert({
+      where: { name },
+      create: { name, sortOrder: i },
+      update: { sortOrder: i },
+    })
+  }
+  const other = await prismaInstance.vendor.findUnique({
+    where: { name: DEFAULT_VENDOR_NAME },
+    select: { id: true },
+  })
+  if (!other) throw new Error(`Default vendor "${DEFAULT_VENDOR_NAME}" is missing`)
+  return other.id
+}
+
 /** One placeholder per non–Staff-Apparel form. Staff Apparel is synced from the GW price sheet separately. */
-async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
+async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient, defaultVendorId: number) {
   await prismaInstance.product.createMany({
     data: [
       {
@@ -140,6 +162,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] Store Maintenance — replace in Item Catalog',
@@ -147,6 +170,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] ADC Supply — replace in Item Catalog',
@@ -154,6 +178,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] ADC Maintenance — replace in Item Catalog',
@@ -161,6 +186,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] Ebooks Supply — replace in Item Catalog',
@@ -168,6 +194,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] Ebooks Maintenance — replace in Item Catalog',
@@ -175,6 +202,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] Ecomm Supply — replace in Item Catalog',
@@ -182,6 +210,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
       {
         name: '[Placeholder] Ecomm Maintenance — replace in Item Catalog',
@@ -189,6 +218,7 @@ async function seedMinimalPlaceholderCatalog(prismaInstance: PrismaClient) {
         unitPriceCents: 100,
         maxQuantity: 5,
         isActive: true,
+        vendorId: defaultVendorId,
       },
     ],
   })
@@ -203,18 +233,21 @@ async function main() {
   await migrateStoreMaintenanceProductSuffixHmToSmo(prisma)
   await migrateStoreMaintenanceCategoryName(prisma)
   await migrateStoreSortOrder(prisma)
+  await ensureDefaultVendors(prisma)
 
   const storeCount = await prisma.store.count()
   const productCount = await prisma.product.count()
 
   if (storeCount === 0 && productCount === 0) {
     console.log('Empty database: creating stores and minimal placeholder catalog.')
+    const defaultVendorId = await ensureDefaultVendors(prisma)
     await prisma.store.createMany({ data: DEFAULT_STORE_SEED })
     console.log(`Created ${DEFAULT_STORE_SEED.length} stores`)
-    await seedMinimalPlaceholderCatalog(prisma)
+    await seedMinimalPlaceholderCatalog(prisma, defaultVendorId)
     await migrateStoreSortOrder(prisma)
     await ensureMissingExtraStores(prisma)
     await syncStaffApparelPriceSheetFromSeed(prisma)
+    await ensureDailyAnnouncement(prisma)
     console.log('Seeding completed.')
     return
   }
@@ -224,6 +257,20 @@ async function main() {
     'Database already has data; skipped inserting catalog. Apply prisma migrations (e.g. trim to one product per category) and manage products in the Item Catalog.'
   )
   await syncStaffApparelPriceSheetFromSeed(prisma)
+  await ensureDailyAnnouncement(prisma)
+}
+
+async function ensureDailyAnnouncement(prismaInstance: PrismaClient) {
+  await prismaInstance.dailyAnnouncement.upsert({
+    where: { id: DAILY_ANNOUNCEMENT_ID },
+    create: {
+      id: DAILY_ANNOUNCEMENT_ID,
+      title: DEFAULT_DAILY_ANNOUNCEMENT.title,
+      body: DEFAULT_DAILY_ANNOUNCEMENT.body,
+      isEnabled: DEFAULT_DAILY_ANNOUNCEMENT.isEnabled,
+    },
+    update: {},
+  })
 }
 
 main()

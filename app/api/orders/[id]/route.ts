@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isOrderFlagColor } from '@/lib/order-flag-colors'
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,11 @@ export async function GET(
         store: true,
         orderLines: {
           include: {
-            product: true,
+            product: {
+              include: {
+                vendor: { select: { id: true, name: true } },
+              },
+            },
           },
         },
       },
@@ -59,5 +64,45 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting order:', error)
     return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const orderId = parseInt(params.id)
+    if (!Number.isFinite(orderId)) {
+      return NextResponse.json({ error: 'Invalid order id' }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const { flagColor } = body
+    if (flagColor !== null && !isOrderFlagColor(flagColor)) {
+      return NextResponse.json(
+        { error: 'Invalid flagColor (RED, GREEN, ORANGE, or null required)' },
+        { status: 400 }
+      )
+    }
+
+    const existing = await prisma.order.findUnique({ where: { id: orderId } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    const order = await prisma.order.update({
+      where: { id: orderId },
+      data: { flagColor },
+      include: {
+        store: true,
+        orderLines: true,
+      },
+    })
+
+    return NextResponse.json(order)
+  } catch (error) {
+    console.error('Error updating order flag:', error)
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
   }
 }

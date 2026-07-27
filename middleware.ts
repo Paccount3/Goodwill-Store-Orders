@@ -10,10 +10,14 @@ function isProtectedAdminPath(pathname: string): boolean {
 
   if (pathname === '/store-management' || pathname.startsWith('/store-management/')) return true
 
+  if (pathname === '/vendor-management' || pathname.startsWith('/vendor-management/')) return true
+
+  if (pathname === '/announcement-management' || pathname.startsWith('/announcement-management/')) return true
+
   // Protect Orders Hub + Order detail pages, but do NOT protect the invoice view,
   // because the order success flow opens `/orders/:id/invoice` for printing.
   if (pathname === '/orders' || pathname.startsWith('/orders/')) {
-    const invoiceRegex = /^\/orders\/\d+\/invoice\/?$/
+    const invoiceRegex = /^\/orders\/\d+\/invoice(\/vendor)?\/?$/
     if (invoiceRegex.test(pathname)) return false
     return true
   }
@@ -38,6 +42,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/catalog/:path*', '/orders/:path*', '/order-stats/:path*', '/store-management/:path*'],
+  matcher: ['/catalog/:path*', '/orders/:path*', '/order-stats/:path*', '/store-management/:path*', '/vendor-management/:path*', '/announcement-management/:path*'],
 }
 

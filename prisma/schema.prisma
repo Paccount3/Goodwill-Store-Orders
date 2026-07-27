@@ -21,6 +21,13 @@ model Store {
   orders      Order[]
 }
 
+model Vendor {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  products  Product[]
+}
+
 model Product {
   id              Int         @id @default(autoincrement())
   name            String
@@ -35,20 +42,37 @@ model Product {
   availableColors String?     // JSON array: ["Navy Blue", "Royal Blue", "White", etc.]
   style           String?      // "Men", "Women", "Unisex", or null
   sizePriceMap    String?     // JSON object: {"XS": 1600, "S": 1600, "XXL": 1800, ...} in cents
+  vendorId        Int
+  vendor          Vendor      @relation(fields: [vendorId], references: [id])
   orderLines      OrderLine[]
 }
 
+enum OrderFlagColor {
+  RED
+  GREEN
+  ORANGE
+}
+
 model Order {
-  id            Int         @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   storeId      Int
-  store         Store       @relation(fields: [storeId], references: [id])
+  store         Store           @relation(fields: [storeId], references: [id])
   managerName  String
-  createdAt    DateTime    @default(now())
-  orderDate    DateTime    @default(now())
+  createdAt    DateTime        @default(now())
+  orderDate    DateTime        @default(now())
   subtotalCents Int
   notes        String?
-  orderType    String?      // 'NSSO', 'SU', 'ADC_S', 'ADC_M', 'HM'
+  orderType    String?          // 'NSSO', 'SU', 'ADC_S', 'ADC_M', 'HM'
+  flagColor    OrderFlagColor?
   orderLines   OrderLine[]
+}
+
+model DailyAnnouncement {
+  id        Int      @id @default(1)
+  title     String
+  body      String   @db.Text
+  isEnabled Boolean  @default(true)
+  updatedAt DateTime @updatedAt
 }
 
 model OrderLine {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { STAFF_APPAREL_CATEGORY } from '@/lib/product-categories'
 import { buildUniformSizePriceMap } from '@/lib/uniform-helpers'
+import { resolveVendorId } from '@/lib/vendors-server'
 
 export async function PATCH(
   request: NextRequest,
@@ -19,6 +20,7 @@ export async function PATCH(
       style,
       sizePriceMap,
       isUniform,
+      vendorId,
     } = body
 
     const updateData: Record<string, unknown> = {}
@@ -63,6 +65,17 @@ export async function PATCH(
 
     if (isUniform !== undefined) {
       updateData.isUniform = Boolean(isUniform)
+    }
+
+    if (vendorId !== undefined) {
+      try {
+        updateData.vendorId = await resolveVendorId(vendorId)
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'Invalid vendor' },
+          { status: 400 }
+        )
+      }
     }
 
     if (style !== undefined) {
@@ -181,6 +194,9 @@ export async function PATCH(
     const product = await prisma.product.update({
       where: { id },
       data: updateData as any,
+      include: {
+        vendor: { select: { id: true, name: true } },
+      },
     })
 
     return NextResponse.json(product)

@@ -14,6 +14,7 @@ import {
 } from '@/lib/product-categories'
 import { formatPrismaError, logApiError } from '@/lib/api-prisma-error'
 import { buildUniformSizePriceMap } from '@/lib/uniform-helpers'
+import { resolveVendorId } from '@/lib/vendors-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,6 +103,9 @@ export async function GET(request: NextRequest) {
 
     const products = await prisma.product.findMany({
       where,
+      include: {
+        vendor: { select: { id: true, name: true } },
+      },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
     })
 
@@ -132,7 +136,8 @@ export async function POST(request: NextRequest) {
       availableSizes, 
       availableColors, 
       style, 
-      sizePriceMap 
+      sizePriceMap,
+      vendorId,
     } = body
 
     if (!name || !category || unitPriceCents === undefined || maxQuantity === undefined) {
@@ -194,6 +199,16 @@ export async function POST(request: NextRequest) {
     })
     const nextSortOrder = (maxAgg._max.sortOrder ?? -1) + 1
 
+    let resolvedVendorId: number
+    try {
+      resolvedVendorId = await resolveVendorId(vendorId)
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : 'Invalid vendor' },
+        { status: 400 }
+      )
+    }
+
     const product = await prisma.product.create({
       data: {
         name,
@@ -207,6 +222,10 @@ export async function POST(request: NextRequest) {
         availableColors: colorsJson,
         style: styleVal,
         sizePriceMap: sizeMapJson,
+        vendorId: resolvedVendorId,
+      },
+      include: {
+        vendor: { select: { id: true, name: true } },
       },
     })
 
